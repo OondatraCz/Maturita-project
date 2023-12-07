@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "822392066374",
+    "project_id": "chore-master-552bb",
+    "storage_bucket": "chore-master-552bb.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:822392066374:android:bbbe26b9e1149f9e82d547",
+        "android_client_info": {
+          "package_name": "com.taskmaster.choremaster"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCPW4-4CqTH3o6m3iAY7qu9WZrI6QDBs6Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
