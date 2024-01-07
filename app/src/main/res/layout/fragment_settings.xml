@@ -10,9 +10,27 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:text="settings fragment" />
+    <Spinner
+        android:id="@+id/groupSelectionSpinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/txt"
+        android:layout_marginTop="25dp" />
+    <Button
+        android:id="@+id/btnCreateGroup"
+        android:layout_marginTop="50dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="btnCreateGroup" />
+    <Button
+        android:id="@+id/btnInviteUser"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="100dp"
+        android:text="Invite a user to selected group"/>
     <Button
         android:id="@+id/btnLogout"
-        android:layout_marginTop="50dp"
+        android:layout_marginTop="200dp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="LogOut" />
@@ -20,7 +38,7 @@
         android:id="@+id/btnDelete"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="100dp"
+        android:layout_marginTop="250dp"
         android:text="Delete acc"/>
 
 </FrameLayout>
