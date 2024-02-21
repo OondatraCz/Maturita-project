@@ -4,45 +4,59 @@ package project.taskmaster.choremaster;
 import com.google.firebase.Timestamp;
 
 import java.util.Arrays;
+import java.util.List;
 
 public class Task {
+    private String id;
     private String title;
     private String category;
     private String description;
     private String repeatingMode;
-    private String[] repetitionDetails;
-    private String asignedTo;
+    private List<String> repeatingValue;
+    private String assignedTo;
     private String createdBy;
     private Timestamp dueDate;
     private Timestamp lastCompleted;
+    private int points;
 
     @Override
     public String toString() {
         return "TaskModel{" +
-                "title='" + title + '\'' +
+                "id='" + id +'\'' +
+                ", title='" + title + '\'' +
                 ", category='" + category + '\'' +
                 ", description='" + description + '\'' +
                 ", repeatingMode='" + repeatingMode + '\'' +
-                ", asignedTo='" + asignedTo + '\'' +
+                ", assignedTo='" + assignedTo + '\'' +
                 ", createdBy='" + createdBy + '\'' +
-                ", repetitionDetails=" + Arrays.toString(repetitionDetails) +
+                ", repetitionDetails=" + repeatingValue.toString() +
                 ", dueDate=" + dueDate +
                 ", lastCompleted=" + lastCompleted +
+                ", points=" + points +
                 '}';
     }
 
     public Task(){}
 
-    public Task(String title, String category, String description, String repeatingMode, String asignedTo, String createdBy, String[] repetitionDetails, Timestamp dueDate, Timestamp lastCompleted) {
+    public Task(String title, String category, String description, String repeatingMode, String assignedTo, String createdBy, List<String> repetitionDetails, Timestamp dueDate, Timestamp lastCompleted, int points) {
         this.title = title;
         this.category = category;
         this.description = description;
         this.repeatingMode = repeatingMode;
-        this.asignedTo = asignedTo;
+        this.assignedTo = assignedTo;
         this.createdBy = createdBy;
-        this.repetitionDetails = repetitionDetails;
+        this.repeatingValue = repetitionDetails;
         this.dueDate = dueDate;
         this.lastCompleted = lastCompleted;
+        this.points = points;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getTitle() {
@@ -77,12 +91,12 @@ public class Task {
         this.repeatingMode = repeatingMode;
     }
 
-    public String getAsignedTo() {
-        return asignedTo;
+    public String getAssignedTo() {
+        return assignedTo;
     }
 
-    public void setAsignedTo(String asignedTo) {
-        this.asignedTo = asignedTo;
+    public void setAssignedTo(String assignedTo) {
+        this.assignedTo = assignedTo;
     }
 
     public String getCreatedBy() {
@@ -93,12 +107,12 @@ public class Task {
         this.createdBy = createdBy;
     }
 
-    public String[] getRepetitionDetails() {
-        return repetitionDetails;
+    public List<String> getRepeatingValue() {
+        return repeatingValue;
     }
 
-    public void setRepetitionDetails(String[] repetitionDetails) {
-        this.repetitionDetails = repetitionDetails;
+    public void setRepeatingValue(List<String> repeatingValue) {
+        this.repeatingValue = repeatingValue;
     }
 
     public Timestamp getDueDate() {
@@ -115,5 +129,12 @@ public class Task {
 
     public void setLastCompleted(Timestamp lastCompleted) {
         this.lastCompleted = lastCompleted;
+    }
+    public int getPoints() {
+        return points;
+    }
+
+    public void setPoints(int points) {
+        this.points = points;
     }
 }

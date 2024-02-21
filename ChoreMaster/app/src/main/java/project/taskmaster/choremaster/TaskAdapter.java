@@ -12,8 +12,15 @@ import java.util.Locale;
 public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder> {
     private List<Task> tasks;
 
-    public TaskAdapter(List<Task> tasks) {
+    public interface OnItemClickListener {
+        void onItemClick(Task task);
+    }
+
+    private OnItemClickListener listener;
+
+    public TaskAdapter(List<Task> tasks, OnItemClickListener listener) {
         this.tasks = tasks;
+        this.listener = listener;
     }
 
     @Override
@@ -24,7 +31,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
 
     @Override
     public void onBindViewHolder(TaskViewHolder holder, int position) {
-        holder.bind(tasks.get(position));
+        holder.bind(tasks.get(position), listener);
     }
 
     @Override
@@ -49,11 +56,20 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             textViewDueDate = view.findViewById(R.id.textViewDueDate);
         }
 
-        public void bind(Task task) {
+        public void bind(Task task, OnItemClickListener listener) {
             textViewTitle.setText(task.getTitle());
             textViewDescription.setText(task.getDescription());
             SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
             textViewDueDate.setText(sdf.format(task.getDueDate().toDate()));
+
+            itemView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (listener != null) {
+                        listener.onItemClick(task);
+                    }
+                }
+            });
         }
     }
 }

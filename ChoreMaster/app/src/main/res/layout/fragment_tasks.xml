@@ -11,21 +11,53 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
+        <Button
+            android:id="@+id/btnAllTasks"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:backgroundTint="@color/selectedButtonColor"
+            android:text="All tasks"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/btnMyTasks" />
+
+        <Button
+            android:id="@+id/btnMyTasks"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="My tasks"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/btnAllTasks"
+            app:layout_constraintEnd_toStartOf="@+id/btnOwnedTasks" />
+
+        <Button
+            android:id="@+id/btnOwnedTasks"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="15dp"
+            android:text="Owned tasks"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/btnMyTasks"
+            app:layout_constraintEnd_toEndOf="parent" />
+
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recyclerView"
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:orientation="vertical"
+            android:layout_marginTop="10dp"
             app:layout_constraintBottom_toTopOf="@+id/btnAddTask"
             app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toBottomOf="@+id/btnAllTasks"
+            app:layout_constraintVertical_bias="0.0" />
 
         <Button
             android:id="@+id/btnAddTask"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Přidat Úkol"
+            android:text="Create Task"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />

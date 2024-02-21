@@ -3,8 +3,10 @@ package project.taskmaster.choremaster;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
 import android.os.Bundle;
 
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
@@ -14,7 +16,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.DocumentChange;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
@@ -25,41 +29,25 @@ import java.util.List;
 
 import project.taskmaster.choremaster.databinding.FragmentTasksBinding;
 
-/**
- * A simple {@link Fragment} subclass.
- * Use the {@link TasksFragment#newInstance} factory method to
- * create an instance of this fragment.
- */
 public class TasksFragment extends Fragment {
-
+    private List<Task> allTasks = new ArrayList<>();
+    private enum TaskFilter { ALL, MY_TASKS, OWNED_TASKS };
+    private TaskFilter taskFilter = TaskFilter.ALL;
     private FragmentTasksBinding binding;
-    private static final String ARG_PARAM1 = "param1";
-    private static final String ARG_PARAM2 = "param2";
-    private String mParam1;
-    private String mParam2;
     private TaskAdapter adapter;
     private SharedPreferences sharedPreferences;
     private ListenerRegistration taskListener;
+    private String currentUserId;
 
-    public TasksFragment() {
-        // Required empty public constructor
-    }
+    public TasksFragment() {    }
     public static TasksFragment newInstance(String param1, String param2) {
         TasksFragment fragment = new TasksFragment();
-        Bundle args = new Bundle();
-        args.putString(ARG_PARAM1, param1);
-        args.putString(ARG_PARAM2, param2);
-        fragment.setArguments(args);
         return fragment;
     }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
-        }
         sharedPreferences = getActivity().getSharedPreferences("ChoreMaster", Context.MODE_PRIVATE);
     }
 
@@ -82,24 +70,37 @@ public class TasksFragment extends Fragment {
                     return;
                 }
 
-                List<Task> tasks = new ArrayList<>();
                 if (queryDocumentSnapshots != null) {
-                    for (DocumentSnapshot snapshot : queryDocumentSnapshots.getDocuments()) {
-                        Task task = snapshot.toObject(Task.class);
-                        if (task != null) {
-                            tasks.add(task);
+                    for (DocumentChange change : queryDocumentSnapshots.getDocumentChanges()) {
+                        Task task = change.getDocument().toObject(Task.class);
+                        task.setId(change.getDocument().getId());
+
+                        switch (change.getType()) {
+                            case ADDED:
+                                allTasks.add(task);
+                                break;
+                            case MODIFIED:
+                                for (int i = 0; i < allTasks.size(); i++) {
+                                    if (allTasks.get(i).getId().equals(task.getId())) {
+                                        allTasks.set(i, task);
+                                        break;
+                                    }
+                                }
+                                break;
+                            case REMOVED:
+                                for (int i = 0; i < allTasks.size(); i++) {
+                                    if (allTasks.get(i).getId().equals(task.getId())) {
+                                        allTasks.remove(i);
+                                        break;
+                                    }
+                                }
+                                break;
                         }
                     }
+                    applyCurrentFilter();
                 }
-                adapter.updateTasks(tasks);
             });
         }
-    }
-
-    private void createRecyclerViewAdapter() {
-        adapter = new TaskAdapter(new ArrayList<>());
-        binding.recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-        binding.recyclerView.setAdapter(adapter);
     }
 
     @Override
@@ -107,13 +108,53 @@ public class TasksFragment extends Fragment {
         binding = FragmentTasksBinding.inflate(getLayoutInflater());
         View view = binding.getRoot();
 
-        adapter = new TaskAdapter(new ArrayList<Task>());
-        binding.recyclerView.setAdapter(adapter);
+        currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
 
+        TaskAdapter.OnItemClickListener itemClickListener = new TaskAdapter.OnItemClickListener() {
+            @Override
+            public void onItemClick(Task task) {
+                Intent intent = new Intent(getActivity(), TaskDetailActivity.class);
+                intent.putExtra("taskId", task.getId());
+                startActivity(intent);
+            }
+        };
+
+        binding.btnAllTasks.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                taskFilter = TaskFilter.ALL;
+                binding.btnOwnedTasks.setBackgroundColor(ContextCompat.getColor(getContext(), R.color.defaultButtonColor));
+                binding.btnMyTasks.setBackgroundColor(ContextCompat.getColor(getContext(), R.color.defaultButtonColor));
+                binding.btnAllTasks.setBackgroundColor(ContextCompat.getColor(getContext(), R.color.selectedButtonColor));
+                applyCurrentFilter();
+            }
+        });
+
+        binding.btnMyTasks.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                taskFilter = TaskFilter.MY_TASKS;
+                binding.btnOwnedTasks.setBackgroundColor(ContextCompat.getColor(getContext(), R.color.defaultButtonColor));
+                binding.btnMyTasks.setBackgroundColor(ContextCompat.getColor(getContext(), R.color.selectedButtonColor));
+                binding.btnAllTasks.setBackgroundColor(ContextCompat.getColor(getContext(), R.color.defaultButtonColor));
+                applyCurrentFilter();
+            }
+        });
+
+        binding.btnOwnedTasks.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                taskFilter = TaskFilter.OWNED_TASKS;
+                binding.btnOwnedTasks.setBackgroundColor(ContextCompat.getColor(getContext(), R.color.selectedButtonColor));
+                binding.btnMyTasks.setBackgroundColor(ContextCompat.getColor(getContext(), R.color.defaultButtonColor));
+                binding.btnAllTasks.setBackgroundColor(ContextCompat.getColor(getContext(), R.color.defaultButtonColor));
+                applyCurrentFilter();
+            }
+        });
+
+        adapter = new TaskAdapter(new ArrayList<Task>(), itemClickListener);
         binding.recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         binding.recyclerView.setAdapter(adapter);
-
-        createRecyclerViewAdapter();
         setupTaskListener();
 
         binding.btnAddTask.setOnClickListener(new View.OnClickListener() {
@@ -125,5 +166,31 @@ public class TasksFragment extends Fragment {
         });
 
         return view;
+    }
+
+    private void applyCurrentFilter() {
+        switch (taskFilter) {
+            case ALL:
+                adapter.updateTasks(allTasks);
+                break;
+            case MY_TASKS:
+                List<Task> myTasks = new ArrayList<>();
+                for (Task task : allTasks) {
+                    if (currentUserId.equals(task.getAssignedTo())) {
+                        myTasks.add(task);
+                    }
+                }
+                adapter.updateTasks(myTasks);
+                break;
+            case OWNED_TASKS:
+                List<Task> ownedTasks = new ArrayList<>();
+                for (Task task : allTasks) {
+                    if (currentUserId.equals(task.getCreatedBy())) {
+                        ownedTasks.add(task);
+                    }
+                }
+                adapter.updateTasks(ownedTasks);
+                break;
+        }
     }
 }

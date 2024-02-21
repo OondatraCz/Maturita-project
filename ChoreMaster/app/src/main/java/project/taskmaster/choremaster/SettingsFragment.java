@@ -31,6 +31,7 @@ import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.EmailAuthProvider;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -85,6 +86,14 @@ public class SettingsFragment extends Fragment {
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+        groupIds = loadGroupIds();
+        groupNames = loadGroupNames();
+        populateGroupSpinner();
+    }
+
+    @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
@@ -134,7 +143,7 @@ public class SettingsFragment extends Fragment {
             Intent intent = new Intent(getActivity(), Login.class);
             startActivity(intent);
         } else{
-            binding.txt.setText(user.getEmail());
+            //binding.txt.setText(user.getEmail());
         }
 
         populateGroupSpinner();
@@ -143,10 +152,23 @@ public class SettingsFragment extends Fragment {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 sharedPreferences.edit().putString("activeGroupId", groupIds.get(position)).commit();
-                binding.txt.setText(groupIds.get(position)/*sharedPreferences.getString("activeGroupId", null)*/);
+                Toast.makeText(getActivity(), groupIds.get(position), Toast.LENGTH_SHORT).show();
+                //binding.txt.setText(groupIds.get(position)/*sharedPreferences.getString("activeGroupId", null)*/);
             }
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+
+        binding.btnManageGroup.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String groupId = sharedPreferences.getString("activeGroupId", null);
+                if (groupId != null) {
+                    checkUserRoleAndStartActivity(groupId);
+                } else {
+                    Toast.makeText(getActivity(), "No group selected", Toast.LENGTH_SHORT).show();
+                }
             }
         });
 
@@ -307,7 +329,7 @@ public class SettingsFragment extends Fragment {
                                     startActivity(shareIntent);
                                 }
                                 else{
-                                    Toast.makeText(getActivity(), "Nejste správci této zkupiny", Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(getActivity(), "You are not an admin of this group", Toast.LENGTH_SHORT).show();
                                 }
                             }
                         })
@@ -325,7 +347,7 @@ public class SettingsFragment extends Fragment {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         binding.groupSelectionSpinner.setAdapter(adapter);
         binding.groupSelectionSpinner.setSelection(groupIds.indexOf(sharedPreferences.getString("activeGroupId", null)));
-        binding.txt.setText(sharedPreferences.getString("activeGroupId", null));
+        //binding.txt.setText(sharedPreferences.getString("activeGroupId", null));
     }
     private void saveGroupIds() {
         SharedPreferences.Editor editor = sharedPreferences.edit();
@@ -360,5 +382,30 @@ public class SettingsFragment extends Fragment {
         } else {
             return new ArrayList<>();
         }
+    }
+
+    private void checkUserRoleAndStartActivity(String groupId) {
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        db.collection("groups").document(groupId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        Map<String, Object> members = (Map<String, Object>) documentSnapshot.get("members");
+                        if (members != null && members.containsKey(userId)) {
+                            Map<String, Object> userDetails = (Map<String, Object>) members.get(userId);
+                            String role = (String) userDetails.get("role");
+                            if ("admin".equals(role)) {
+                                startActivity(new Intent(getActivity(), ManageGroupActivity.class));
+                            } else {
+                                Toast.makeText(getActivity(), "You are not an admin of this group", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    } else {
+                        Toast.makeText(getActivity(), "Group not found", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .addOnFailureListener(e -> Toast.makeText(getActivity(), "Error checking user role", Toast.LENGTH_SHORT).show());
     }
 }
