@@ -12,12 +12,12 @@ public class Task {
     private String category;
     private String description;
     private String repeatingMode;
-    private List<String> repeatingValue;
+    private List<Integer> repeatingValue;
     private String assignedTo;
     private String createdBy;
     private Timestamp dueDate;
     private Timestamp lastCompleted;
-    private int points;
+    private long points;
 
     @Override
     public String toString() {
@@ -38,14 +38,14 @@ public class Task {
 
     public Task(){}
 
-    public Task(String title, String category, String description, String repeatingMode, String assignedTo, String createdBy, List<String> repetitionDetails, Timestamp dueDate, Timestamp lastCompleted, int points) {
+    public Task(String title, String category, String description, String repeatingMode, String assignedTo, String createdBy, List<Integer> repeatingValue, Timestamp dueDate, Timestamp lastCompleted, long points) {
         this.title = title;
         this.category = category;
         this.description = description;
         this.repeatingMode = repeatingMode;
         this.assignedTo = assignedTo;
         this.createdBy = createdBy;
-        this.repeatingValue = repetitionDetails;
+        this.repeatingValue = repeatingValue;
         this.dueDate = dueDate;
         this.lastCompleted = lastCompleted;
         this.points = points;
@@ -107,11 +107,11 @@ public class Task {
         this.createdBy = createdBy;
     }
 
-    public List<String> getRepeatingValue() {
+    public List<Integer> getRepeatingValue() {
         return repeatingValue;
     }
 
-    public void setRepeatingValue(List<String> repeatingValue) {
+    public void setRepeatingValue(List<Integer> repeatingValue) {
         this.repeatingValue = repeatingValue;
     }
 
@@ -130,7 +130,7 @@ public class Task {
     public void setLastCompleted(Timestamp lastCompleted) {
         this.lastCompleted = lastCompleted;
     }
-    public int getPoints() {
+    public long getPoints() {
         return points;
     }
 

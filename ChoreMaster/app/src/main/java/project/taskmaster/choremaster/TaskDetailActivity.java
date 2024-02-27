@@ -19,6 +19,7 @@ import android.widget.Toast;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -43,7 +44,7 @@ public class TaskDetailActivity extends AppCompatActivity {
     private FirebaseAuth auth;
     private FirebaseFirestore db;
     private String selectedUser = null;
-    private List<String> selectedDays;
+    private List<Integer> selectedDays;
     private List<String> userIds;
     private Task myTask;
 
@@ -190,9 +191,9 @@ public class TaskDetailActivity extends AppCompatActivity {
                     return;
                 }
 
-                int points;
+                long points;
                 try {
-                    points = Integer.parseInt(binding.edtPoints.getText().toString().trim());
+                    points = Long.parseLong(binding.edtPoints.getText().toString().trim());
                 }
                 catch (Exception e){
                     Toast.makeText(TaskDetailActivity.this, "The points value must be a number", Toast.LENGTH_SHORT).show();
@@ -204,6 +205,8 @@ public class TaskDetailActivity extends AppCompatActivity {
                 }
 
                 Timestamp dueDateTimestamp = new Timestamp(dueDateCalendar.getTime());
+                dueDateCalendar.add(Calendar.DAY_OF_MONTH, 1);
+                Timestamp lastCompletedTimestamp = new Timestamp(dueDateCalendar.getTime());
 
                 taskMap.put("title", binding.edtName.getText().toString());
                 taskMap.put("description", binding.edtDesc.getText().toString());
@@ -211,25 +214,37 @@ public class TaskDetailActivity extends AppCompatActivity {
                 taskMap.put("dueDate", dueDateTimestamp);
                 taskMap.put("assignedTo", userIds.get(binding.userSpinner.getSelectedItemPosition()));
                 taskMap.put("createdBy", auth.getCurrentUser().getUid());
-                taskMap.put("lastCompleted", dueDateTimestamp);
+                taskMap.put("lastCompleted", lastCompletedTimestamp);
                 taskMap.put("points", points);
 
                 int radioID = binding.radioGroup.getCheckedRadioButtonId();
                 if(radioID == binding.radioButton1.getId()){
                     taskMap.put("repeatingMode", "days");
-                    taskMap.put("repeatingValue", Arrays.asList(binding.edtRepeateVal.getText().toString()));
+                    long numberOfDays;
+                    try {
+                        numberOfDays = Long.parseLong(binding.edtRepeateVal.getText().toString().trim());
+                    }
+                    catch (Exception e){
+                        Toast.makeText(TaskDetailActivity.this, "The repeate after days value must be a number", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    if (numberOfDays < 1 || numberOfDays > 1000){
+                        Toast.makeText(TaskDetailActivity.this, "Points can only have a value between 1 and 100", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    taskMap.put("repeatingValue", Arrays.asList(numberOfDays));
                 } else if (radioID == binding.radioButton2.getId()){
                     taskMap.put("repeatingMode", "weekly");
                     taskMap.put("repeatingValue", selectedDays);
                 } else {
                     taskMap.put("repeatingMode", "none");
-                    taskMap.put("repeatingValue", Arrays.asList(null));
+                    taskMap.put("repeatingValue", new ArrayList<>());
                 }
 
                 db.collection("groups").document(groupId).collection("tasks").document(taskId)
                         .set(taskMap)
                         .addOnSuccessListener(documentReference -> {
-                            Toast.makeText(TaskDetailActivity.this, "Task Added Successfully", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(TaskDetailActivity.this, "Task Edited Successfully", Toast.LENGTH_SHORT).show();
                             finish();
                         })
                         .addOnFailureListener(e -> {
@@ -241,16 +256,10 @@ public class TaskDetailActivity extends AppCompatActivity {
         binding.btnComplete.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd", Locale.getDefault());
-
                 String date = fmt.format(new Date());
 
-                Log.d("a", date);
-                Log.d("a", fmt.format(myTask.getDueDate().toDate()));
-                Log.d("a", fmt.format(myTask.getLastCompleted().toDate()));
-
-                if(fmt.format(myTask.getLastCompleted().toDate()).equals(date) && !fmt.format(myTask.getDueDate().toDate()).equals(date)){
+                if(fmt.format(myTask.getLastCompleted().toDate()).equals(date) || !fmt.format(myTask.getDueDate().toDate()).equals(date)){
                     Toast.makeText(TaskDetailActivity.this, "You cannot mark the task as completed", Toast.LENGTH_SHORT).show();
                     return;
                 }
@@ -258,38 +267,85 @@ public class TaskDetailActivity extends AppCompatActivity {
                 Map<String, Object> update = new HashMap<>();
                 update.put("lastCompleted", new Timestamp(new Date()));
 
-                db.collection("groups").document(groupId).collection("tasks").document(taskId)
-                        .update(update)
-                        .addOnCompleteListener(task -> {
-                            if (task.isSuccessful()) {
-                                Toast.makeText(TaskDetailActivity.this, "Task marked as completed", Toast.LENGTH_SHORT).show();
-                                finish();
-                            } else {
-                                Toast.makeText(TaskDetailActivity.this, "Error updating task", Toast.LENGTH_SHORT).show();
-                            }
-                        });
+                final String assignedUserId = myTask.getAssignedTo();
+                final DocumentReference groupRef = db.collection("groups").document(groupId);
+
+                db.runTransaction(transaction -> {
+                    DocumentSnapshot groupSnapshot = transaction.get(groupRef);
+                    Map<String, Object> members = (Map<String, Object>) groupSnapshot.get("members");
+                    if (members != null && members.containsKey(assignedUserId)) {
+                        Map<String, Object> userDetails = (Map<String, Object>) members.get(assignedUserId);
+                        long currentPoints = (long)userDetails.get("points");
+                        long newPoints = currentPoints + myTask.getPoints();
+
+                        userDetails.put("points", newPoints);
+                        members.put(assignedUserId, userDetails);
+                        transaction.update(groupRef, "members", members);
+                    }
+
+                    Map<String, Object> update1 = new HashMap<>();
+                    update1.put("lastCompleted", new Timestamp(new Date()));
+                    DocumentReference taskRef = db.collection("groups").document(groupId).collection("tasks").document(taskId);
+                    transaction.update(taskRef, update1);
+
+                    return null;
+                }).addOnCompleteListener(task -> {
+                    if (task.isSuccessful()){
+                        Toast.makeText(TaskDetailActivity.this, "Task marked as completed", Toast.LENGTH_SHORT).show();
+                        finish();
+                    }
+                    else{
+                        Toast.makeText(TaskDetailActivity.this, task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
             }
         });
     }
     public void onBtnDayClicked(View view){
         Button clickedButton = (Button)view;
         String day = clickedButton.getText().toString();
-        if(selectedDays.contains(day)){
+        int dayInt = 0;
+        switch(day) {
+            case "Mo":
+                dayInt = 1; // Monday
+                break;
+            case "Tu":
+                dayInt = 2; // Tuesday
+                break;
+            case "We":
+                dayInt = 3; // Wednesday
+                break;
+            case "Th":
+                dayInt = 4; // Thursday
+                break;
+            case "Fr":
+                dayInt = 5; // Friday
+                break;
+            case "Sa":
+                dayInt = 6; // Saturday
+                break;
+            case "Su":
+                dayInt = 7; // Sunday
+                break;
+        }
+        if(selectedDays.contains(dayInt)){
             view.setBackgroundColor(ContextCompat.getColor(TaskDetailActivity.this, R.color.defaultButtonColor));
-            selectedDays.remove(day);
+            selectedDays.remove(dayInt);
         }
         else{
             view.setBackgroundColor(ContextCompat.getColor(TaskDetailActivity.this, R.color.selectedButtonColor));
-            selectedDays.add(day);
+            selectedDays.add(dayInt);
         }
-
     }
     private void setEditable(boolean isEditable) {
         binding.edtName.setEnabled(isEditable);
         binding.edtDesc.setEnabled(isEditable);
         binding.spinnerCategory.setEnabled(isEditable);
         binding.btnSubmit.setVisibility(isEditable ? View.VISIBLE : View.GONE);
-        binding.btnComplete.setVisibility(isEditable ? View.GONE : View.VISIBLE);
+
+        if (myTask.getAssignedTo().equals(auth.getCurrentUser().getUid())){
+            binding.btnComplete.setVisibility(isEditable ? View.GONE : View.VISIBLE);
+        }
         binding.btnTime.setVisibility(isEditable ? View.VISIBLE : View.INVISIBLE);
         binding.btnDate.setVisibility(isEditable ? View.VISIBLE : View.INVISIBLE);
         binding.radioGroup.setEnabled(isEditable);
@@ -300,19 +356,16 @@ public class TaskDetailActivity extends AppCompatActivity {
         binding.radioButton2.setEnabled(isEditable);
         binding.radioButton3.setEnabled(isEditable);
 
-        Map<String, Button> buttonMap = new HashMap<>();
-        buttonMap.put("Mo", binding.button1);
-        buttonMap.put("Tu", binding.button2);
-        buttonMap.put("We", binding.button3);
-        buttonMap.put("Th", binding.button4);
-        buttonMap.put("Fr", binding.button5);
-        buttonMap.put("Sa", binding.button6);
-        buttonMap.put("Su", binding.button7);
+        Map<Integer, Button> buttonMap = new HashMap<>();
+        buttonMap.put(1, binding.button1);
+        buttonMap.put(2, binding.button2);
+        buttonMap.put(3, binding.button3);
+        buttonMap.put(4, binding.button4);
+        buttonMap.put(5, binding.button5);
+        buttonMap.put(6, binding.button6);
+        buttonMap.put(7, binding.button7);
 
-        Log.d("a", buttonMap.toString());
-        Log.d("a", myTask.getRepeatingValue().toString());
-
-        for (Map.Entry<String, Button> entry : buttonMap.entrySet()) {
+        for (Map.Entry<Integer, Button> entry : buttonMap.entrySet()) {
             Button dayButton = entry.getValue();
             if (selectedDays.contains(entry.getKey())) {
                 dayButton.setBackgroundColor(ContextCompat.getColor(TaskDetailActivity.this, R.color.selectedButtonColor));
@@ -353,24 +406,33 @@ public class TaskDetailActivity extends AppCompatActivity {
     }
 
     private void fetchUserDetails() {
+        Map<String, String> userIdToNameMap = new HashMap<>();
         List<String> userNames = new ArrayList<>();
+
         for (String userId : userIds) {
             db.collection("users").document(userId).get().addOnCompleteListener(task -> {
                 if (task.isSuccessful()) {
                     DocumentSnapshot document = task.getResult();
                     if (document.exists()) {
                         String name = document.getString("username");
-                        userNames.add(name);
+                        userIdToNameMap.put(userId, name);
 
-                        if (userNames.size() == userIds.size()) {
+                        if (userIdToNameMap.size() == userIds.size()) {
+                            for (String id : userIds) {
+                                userNames.add(userIdToNameMap.get(id));
+                            }
+
                             ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, userNames);
                             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
                             binding.userSpinner.setAdapter(adapter);
                             binding.userSpinner.setSelection(userIds.indexOf(myTask.getAssignedTo()));
                         }
                     }
+                } else {
+                    Log.e("TaskDetailActivity", "Error getting user details", task.getException());
                 }
             });
         }
     }
+
 }

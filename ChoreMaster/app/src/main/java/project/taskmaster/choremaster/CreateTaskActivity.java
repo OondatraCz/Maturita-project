@@ -15,6 +15,7 @@ import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.DatePicker;
 import android.widget.RadioGroup;
+import android.widget.Switch;
 import android.widget.TimePicker;
 import android.widget.Toast;
 
@@ -41,7 +42,7 @@ public class CreateTaskActivity extends AppCompatActivity {
     private SharedPreferences sharedPreferences;
     private String selectedUser = null;
     private List<String> userIds;
-    private List<String> selectedDays = new ArrayList<>();
+    private List<Integer> selectedDays = new ArrayList<>();
 
 
 
@@ -157,9 +158,9 @@ public class CreateTaskActivity extends AppCompatActivity {
                     return;
                 }
 
-                int points;
+                long points;
                 try {
-                    points = Integer.parseInt(binding.edtPoints.getText().toString().trim());
+                    points = Long.parseLong(binding.edtPoints.getText().toString().trim());
                 }
                 catch (Exception e){
                     Toast.makeText(CreateTaskActivity.this, "The points value must be a number", Toast.LENGTH_SHORT).show();
@@ -171,6 +172,9 @@ public class CreateTaskActivity extends AppCompatActivity {
                 }
 
                 Timestamp dueDateTimestamp = new Timestamp(dueDateCalendar.getTime());
+                dueDateCalendar.add(Calendar.DAY_OF_MONTH, 1);
+                Timestamp lastCompletedTimestamp = new Timestamp(dueDateCalendar.getTime());
+
 
                 taskMap.put("title", binding.edtName.getText().toString());
                 taskMap.put("description", binding.edtDescription.getText().toString());
@@ -178,13 +182,25 @@ public class CreateTaskActivity extends AppCompatActivity {
                 taskMap.put("dueDate", dueDateTimestamp);
                 taskMap.put("assignedTo", userIds.get(binding.spinnerMembers.getSelectedItemPosition()));
                 taskMap.put("createdBy", auth.getCurrentUser().getUid());
-                taskMap.put("lastCompleted", dueDateTimestamp);
+                taskMap.put("lastCompleted", lastCompletedTimestamp);
                 taskMap.put("points", points);
 
                 int radioID = binding.radioGroup.getCheckedRadioButtonId();
                 if(radioID == binding.radioButton1.getId()){
                     taskMap.put("repeatingMode", "days");
-                    taskMap.put("repeatingValue", Arrays.asList(binding.edtRepeateVal.getText().toString()));
+                    long numberOfDays;
+                    try {
+                        numberOfDays = Long.parseLong(binding.edtRepeateVal.getText().toString().trim());
+                    }
+                    catch (Exception e){
+                        Toast.makeText(CreateTaskActivity.this, "The repeate after days value must be a number", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    if (numberOfDays < 1 || numberOfDays > 1000){
+                        Toast.makeText(CreateTaskActivity.this, "Points can only have a value between 1 and 100", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    taskMap.put("repeatingValue", Arrays.asList(numberOfDays));
                 } else if (radioID == binding.radioButton2.getId()){
                     taskMap.put("repeatingMode", "weekly");
                     taskMap.put("repeatingValue", selectedDays);
@@ -209,13 +225,37 @@ public class CreateTaskActivity extends AppCompatActivity {
     public void onBtnDayClicked(View view){
         Button clickedButton = (Button)view;
         String day = clickedButton.getText().toString();
-        if(selectedDays.contains(day)){
+        int dayInt = 0;
+        switch(day) {
+            case "Mo":
+                dayInt = 1;
+                break;
+            case "Tu":
+                dayInt = 2;
+                break;
+            case "We":
+                dayInt = 3;
+                break;
+            case "Th":
+                dayInt = 4;
+                break;
+            case "Fr":
+                dayInt = 5;
+                break;
+            case "Sa":
+                dayInt = 6;
+                break;
+            case "Su":
+                dayInt = 7;
+                break;
+        }
+        if(selectedDays.contains(dayInt)){
             view.setBackgroundColor(ContextCompat.getColor(CreateTaskActivity.this, R.color.defaultButtonColor));
-            selectedDays.remove(day);
+            selectedDays.remove(dayInt);
         }
         else{
             view.setBackgroundColor(ContextCompat.getColor(CreateTaskActivity.this, R.color.selectedButtonColor));
-            selectedDays.add(day);
+            selectedDays.add(dayInt);
         }
 
     }

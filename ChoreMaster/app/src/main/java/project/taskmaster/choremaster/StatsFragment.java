@@ -1,5 +1,7 @@
 package project.taskmaster.choremaster;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 
 import androidx.fragment.app.Fragment;
@@ -7,41 +9,24 @@ import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
-/**
- * A simple {@link Fragment} subclass.
- * Use the {@link StatsFragment#newInstance} factory method to
- * create an instance of this fragment.
- */
+import com.google.firebase.firestore.FirebaseFirestore;
+
+import java.util.Map;
+
+import project.taskmaster.choremaster.databinding.FragmentStatsBinding;
+
 public class StatsFragment extends Fragment {
-
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-    private static final String ARG_PARAM1 = "param1";
-    private static final String ARG_PARAM2 = "param2";
-
-    // TODO: Rename and change types of parameters
-    private String mParam1;
-    private String mParam2;
+    private FragmentStatsBinding binding;
+    private SharedPreferences sharedPreferences;
+    private FirebaseFirestore db;
 
     public StatsFragment() {
-        // Required empty public constructor
     }
-
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param param1 Parameter 1.
-     * @param param2 Parameter 2.
-     * @return A new instance of fragment StatsFragment.
-     */
-    // TODO: Rename and change types and number of parameters
-    public static StatsFragment newInstance(String param1, String param2) {
+    public static StatsFragment newInstance() {
         StatsFragment fragment = new StatsFragment();
         Bundle args = new Bundle();
-        args.putString(ARG_PARAM1, param1);
-        args.putString(ARG_PARAM2, param2);
         fragment.setArguments(args);
         return fragment;
     }
@@ -49,16 +34,50 @@ public class StatsFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
-        }
+        db = FirebaseFirestore.getInstance();
+        sharedPreferences = getActivity().getSharedPreferences("ChoreMaster", Context.MODE_PRIVATE);
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_stats, container, false);
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        binding = FragmentStatsBinding.inflate(getLayoutInflater());
+        View view = binding.getRoot();
+
+        String activeGroupId = sharedPreferences.getString("activeGroupId", null);
+
+        if (!activeGroupId.isEmpty()) {
+            db.collection("groups").document(activeGroupId).get().addOnSuccessListener(groupSnapshot -> {
+                if (groupSnapshot.exists()) {
+                    Map<String, Object> members = (Map<String, Object>) groupSnapshot.get("members");
+                    if (members != null) {
+                        StringBuilder statsBuilder = new StringBuilder();
+                        for (String userId : members.keySet()) {
+                            db.collection("users").document(userId).get().addOnSuccessListener(userSnapshot -> {
+                                if (userSnapshot.exists()) {
+                                    String userName = userSnapshot.getString("username");
+                                    Map<String, Object> userDetails = (Map<String, Object>) members.get(userId);
+                                    Long points = userDetails != null ? (Long) userDetails.get("points") : 0;
+
+                                    statsBuilder.append(userName).append(": ").append(points).append(" points\n");
+
+                                    // Once all users are processed, set the text in textViewStats
+                                    if (statsBuilder.length() > 0) {
+                                        binding.textViewStats.setText(statsBuilder.toString());
+                                    }
+                                }
+                            }).addOnFailureListener(e -> {});
+                        }
+                    } else {
+                        binding.textViewStats.setText("No members found.");
+                    }
+                } else {
+                    binding.textViewStats.setText("Group not found.");
+                }
+            }).addOnFailureListener(e -> binding.textViewStats.setText("Error loading group: " + e.getMessage()));
+        } else {
+            binding.textViewStats.setText("No active group selected.");
+        }
+
+        return view;
     }
 }

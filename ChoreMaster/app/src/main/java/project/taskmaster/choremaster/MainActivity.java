@@ -15,7 +15,6 @@ import android.widget.Toast;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -55,13 +54,13 @@ public class MainActivity extends AppCompatActivity {
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
-        replaceFragment(new HomeFragment());
+        replaceFragment(new TasksFragment());
 
         binding.bottomNavigationView.setOnItemSelectedListener(item -> {
             int itemId = item.getItemId();
 
-            if (itemId == R.id.home) {
-                replaceFragment(new HomeFragment());
+            if (itemId == R.id.calendar) {
+                replaceFragment(new CalendarFragment());
             } else if (itemId == R.id.tasks) {
                 replaceFragment(new TasksFragment());
             } else if (itemId == R.id.stats) {

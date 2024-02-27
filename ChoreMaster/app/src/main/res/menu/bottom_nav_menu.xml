@@ -4,15 +4,15 @@
     <item
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:icon="@drawable/baseline_home_24"
-        android:title="Home"
-        android:id="@+id/home"/>
-    <item
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
         android:icon="@drawable/baseline_task_alt_24"
         android:title="Tasks"
         android:id="@+id/tasks"/>
+    <item
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:icon="@drawable/baseline_calendar_month_24"
+        android:title="Calendar"
+        android:id="@+id/calendar"/>
     <item
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

@@ -1,6 +1,8 @@
 package project.taskmaster.choremaster;
 
 import androidx.recyclerview.widget.RecyclerView;
+
+import java.util.Date;
 import java.util.List;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -9,29 +11,38 @@ import android.widget.TextView;
 import java.text.SimpleDateFormat;
 import java.util.Locale;
 
+import project.taskmaster.choremaster.databinding.ItemTaskBinding;
+
 public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder> {
     private List<Task> tasks;
+    private OnItemClickListener listener;
+    private List<String> customTexts;
 
     public interface OnItemClickListener {
         void onItemClick(Task task);
     }
+    public interface StateTextProvider {
+        String getStateText(Task task);
+    }
 
-    private OnItemClickListener listener;
-
-    public TaskAdapter(List<Task> tasks, OnItemClickListener listener) {
+    public TaskAdapter(List<Task> tasks, OnItemClickListener listener, List<String> customTexts) {
         this.tasks = tasks;
         this.listener = listener;
+        this.customTexts = customTexts;
     }
 
     @Override
     public TaskViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_task, parent, false);
-        return new TaskViewHolder(view);
+        LayoutInflater layoutInflater = LayoutInflater.from(parent.getContext());
+        ItemTaskBinding itemBinding = ItemTaskBinding.inflate(layoutInflater, parent, false);
+        return new TaskViewHolder(itemBinding);
     }
 
     @Override
     public void onBindViewHolder(TaskViewHolder holder, int position) {
-        holder.bind(tasks.get(position), listener);
+        Task task = tasks.get(position);
+        String customText = customTexts.get(position); // Get the custom text by position
+        holder.bind(task, customText, listener);
     }
 
     @Override
@@ -39,35 +50,39 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         return tasks.size();
     }
 
-    public void updateTasks(List<Task> newTasks) {
-        this.tasks.clear();
-        this.tasks.addAll(newTasks);
+    public void updateTasks(List<Task> newTasks, List<String> newCustomTexts) {
+        tasks.clear();
+        tasks.addAll(newTasks);
+        customTexts.clear();
+        customTexts.addAll(newCustomTexts);
         notifyDataSetChanged();
+    }
+
+    public void addTask(Task newTask, String newCustomText) {
+        tasks.add(newTask);
+        customTexts.add(newCustomText);
+        notifyItemInserted(tasks.size() - 1);
     }
 
 
     public static class TaskViewHolder extends RecyclerView.ViewHolder {
-        TextView textViewTitle, textViewDescription, textViewDueDate;
+        private ItemTaskBinding binding;
 
-        public TaskViewHolder(View view) {
-            super(view);
-            textViewTitle = view.findViewById(R.id.textViewTitle);
-            textViewDescription = view.findViewById(R.id.textViewDescription);
-            textViewDueDate = view.findViewById(R.id.textViewDueDate);
+        public TaskViewHolder(ItemTaskBinding binding) {
+            super(binding.getRoot());
+            this.binding = binding;
         }
 
-        public void bind(Task task, OnItemClickListener listener) {
-            textViewTitle.setText(task.getTitle());
-            textViewDescription.setText(task.getDescription());
+        public void bind(final Task task, final String customText, final OnItemClickListener listener) {
+            binding.textViewTitle.setText(task.getTitle());
+            binding.textViewDescription.setText(task.getDescription());
             SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
-            textViewDueDate.setText(sdf.format(task.getDueDate().toDate()));
+            binding.textViewDueDate.setText(sdf.format(task.getDueDate().toDate()));
+            binding.textViewRightSide.setText(customText);
 
-            itemView.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (listener != null) {
-                        listener.onItemClick(task);
-                    }
+            itemView.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onItemClick(task);
                 }
             });
         }

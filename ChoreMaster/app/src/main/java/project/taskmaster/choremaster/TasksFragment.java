@@ -23,8 +23,11 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 
 import project.taskmaster.choremaster.databinding.FragmentTasksBinding;
@@ -152,7 +155,7 @@ public class TasksFragment extends Fragment {
             }
         });
 
-        adapter = new TaskAdapter(new ArrayList<Task>(), itemClickListener);
+        adapter = new TaskAdapter(new ArrayList<Task>(), itemClickListener, new ArrayList<String>());
         binding.recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         binding.recyclerView.setAdapter(adapter);
         setupTaskListener();
@@ -169,28 +172,54 @@ public class TasksFragment extends Fragment {
     }
 
     private void applyCurrentFilter() {
+        List<Task> filteredTasks = new ArrayList<>();
+        List<String> customTexts = new ArrayList<>();
+
         switch (taskFilter) {
-            case ALL:
-                adapter.updateTasks(allTasks);
-                break;
             case MY_TASKS:
-                List<Task> myTasks = new ArrayList<>();
                 for (Task task : allTasks) {
                     if (currentUserId.equals(task.getAssignedTo())) {
-                        myTasks.add(task);
+                        filteredTasks.add(task);
+                        customTexts.add(task.getCategory());
+                        //customTexts.add(GetCustomText(task));
                     }
                 }
-                adapter.updateTasks(myTasks);
                 break;
             case OWNED_TASKS:
-                List<Task> ownedTasks = new ArrayList<>();
                 for (Task task : allTasks) {
                     if (currentUserId.equals(task.getCreatedBy())) {
-                        ownedTasks.add(task);
+                        filteredTasks.add(task);
+                        customTexts.add(task.getCategory());
+                        //customTexts.add(GetCustomText(task));
                     }
                 }
-                adapter.updateTasks(ownedTasks);
                 break;
+            default:
+                for (Task task : allTasks) {
+                    filteredTasks.add(task);
+                    customTexts.add(task.getCategory());
+                    //customTexts.add(GetCustomText(task));
+                }
+                break;
+        }
+
+        adapter.updateTasks(filteredTasks, customTexts);
+    }
+
+    private String GetCustomText(Task task) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd", Locale.getDefault());
+        String today = sdf.format(new Date());
+        String lastCompleted = sdf.format(task.getLastCompleted().toDate());
+        String dueDate = sdf.format(task.getDueDate().toDate());
+
+        if ((lastCompleted.equals(dueDate) && task.getRepeatingMode() == "none") || (lastCompleted.equals(today) && dueDate.equals(today))) {
+            return "Done";
+        } else if (dueDate.equals(today) && !lastCompleted.equals(today)){
+            return "Due today";
+        } else if (dueDate.compareTo(today) > 0 || lastCompleted.compareTo(today) == 1) {
+            return "Upcoming";
+        } else {
+            return "Failed\nUpcoming";
         }
     }
 }
