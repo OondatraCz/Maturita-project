@@ -251,7 +251,7 @@ public class CreateTaskActivity extends AppCompatActivity {
         }
         if(selectedDays.contains(dayInt)){
             view.setBackgroundColor(ContextCompat.getColor(CreateTaskActivity.this, R.color.defaultButtonColor));
-            selectedDays.remove(dayInt);
+            selectedDays.remove(Integer.valueOf(dayInt));
         }
         else{
             view.setBackgroundColor(ContextCompat.getColor(CreateTaskActivity.this, R.color.selectedButtonColor));

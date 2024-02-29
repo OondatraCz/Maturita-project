@@ -307,30 +307,30 @@ public class TaskDetailActivity extends AppCompatActivity {
         int dayInt = 0;
         switch(day) {
             case "Mo":
-                dayInt = 1; // Monday
+                dayInt = 1;
                 break;
             case "Tu":
-                dayInt = 2; // Tuesday
+                dayInt = 2;
                 break;
             case "We":
-                dayInt = 3; // Wednesday
+                dayInt = 3;
                 break;
             case "Th":
-                dayInt = 4; // Thursday
+                dayInt = 4;
                 break;
             case "Fr":
-                dayInt = 5; // Friday
+                dayInt = 5;
                 break;
             case "Sa":
-                dayInt = 6; // Saturday
+                dayInt = 6;
                 break;
             case "Su":
-                dayInt = 7; // Sunday
+                dayInt = 7;
                 break;
         }
         if(selectedDays.contains(dayInt)){
             view.setBackgroundColor(ContextCompat.getColor(TaskDetailActivity.this, R.color.defaultButtonColor));
-            selectedDays.remove(dayInt);
+            selectedDays.remove(Integer.valueOf(dayInt));
         }
         else{
             view.setBackgroundColor(ContextCompat.getColor(TaskDetailActivity.this, R.color.selectedButtonColor));

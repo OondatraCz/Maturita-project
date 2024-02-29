@@ -24,6 +24,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -40,7 +41,7 @@ public class CalendarFragment extends Fragment {
     private SimpleDateFormat dateFormat;
     private SimpleDateFormat timeFormat;
     private Calendar todayCalender;
-    private int daysToShow = 7;
+    private int daysToShow;
     private TaskAdapter adapter;
     private Calendar endDate;
 
@@ -63,7 +64,7 @@ public class CalendarFragment extends Fragment {
         db = FirebaseFirestore.getInstance();
         auth = FirebaseAuth.getInstance();
         sharedPreferences = getActivity().getSharedPreferences("ChoreMaster", Context.MODE_PRIVATE);
-        dateFormat = new SimpleDateFormat("EEEE\nMMMM yyyy", Locale.getDefault());
+        dateFormat = new SimpleDateFormat("EEEE d.\nMMMM yyyy", Locale.getDefault());
         timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
         todayCalender = Calendar.getInstance();
         todayCalender.set(Calendar.HOUR_OF_DAY, 0);
@@ -79,6 +80,8 @@ public class CalendarFragment extends Fragment {
         String groupId = sharedPreferences.getString("activeGroupId", null);
         String userId = auth.getCurrentUser().getUid().toString();
 
+        setDaysToShow();
+
         db.collection("groups").document(groupId).collection("tasks").whereEqualTo("assignedTo", userId).get()
                         .addOnCompleteListener(queryDocumentSnapshots -> {
                             if (queryDocumentSnapshots.isSuccessful() && queryDocumentSnapshots != null){
@@ -86,24 +89,29 @@ public class CalendarFragment extends Fragment {
                                     Task task = snapshot.toObject(Task.class);
                                     task.setId(snapshot.getId());
 
-                                    if(task.getRepeatingMode() != "none" && task.getDueDate().toDate().before(new Date())){
+                                    if(task.getRepeatingMode() != "none" && task.getDueDate().toDate().before(todayCalender.getTime())){
                                         Calendar nextDueDate = Calendar.getInstance();
                                         nextDueDate.setTime(task.getDueDate().toDate());
-                                        nextDueDate = getNextDueDate(nextDueDate, task.getRepeatingMode(), task.getRepeatingValue(), false);
+                                        nextDueDate = getNextDueDate(todayCalender, task.getRepeatingMode(), task.getRepeatingValue(), false);
                                         updateTaskDueDate(task, nextDueDate);
                                         task.setDueDate(new Timestamp(nextDueDate.getTime()));
                                     }
                                     allTasks.add(task);
                                 }
-                                Log.d("a", allTasks.toString());
-                                loadTasks(false);
+                                Collections.sort(allTasks, new Comparator<Task>() {
+                                    @Override
+                                    public int compare(Task t1, Task t2) {
+                                        return t1.getDueDate().compareTo(t2.getDueDate());
+                                    }
+                                });
+                                loadTasks();
                             }
                             else{
                                 Toast.makeText(getActivity(), queryDocumentSnapshots.getException().getMessage().toString(), Toast.LENGTH_SHORT).show();
                             }
                         });
 
-        binding.buttonLoadMore.setOnClickListener(v -> loadTasks(true));
+        binding.buttonLoadMore.setOnClickListener(v -> loadTasks());
 
         TaskAdapter.OnItemClickListener itemClickListener = new TaskAdapter.OnItemClickListener() {
             @Override
@@ -121,46 +129,77 @@ public class CalendarFragment extends Fragment {
         return view;
     }
 
-    private void loadTasks(boolean incrementDateRange) {
-        String userId = auth.getCurrentUser().getUid();
-
-        if (incrementDateRange){
-            daysToShow += 7;
-        }
-
+    private void loadTasks() {
+        daysToShow += 7;
+        Toast.makeText(getActivity(), "Showing " + (int) Math.ceil((double) daysToShow / 7) + " weeks - " + daysToShow + " days ahead.", Toast.LENGTH_SHORT).show();
 
         endDate = (Calendar) todayCalender.clone();
         endDate.add(Calendar.DAY_OF_YEAR, daysToShow);
 
-        String activeGroupId = sharedPreferences.getString("activeGroupId", "");
-
-        Calendar date = Calendar.getInstance();
+        endDate.set(Calendar.HOUR_OF_DAY, 23);
+        endDate.set(Calendar.MINUTE, 59);
+        endDate.set(Calendar.SECOND, 59);
+        endDate.set(Calendar.MILLISECOND, 999);
 
         if(lastCheckedDates.size() != allTasks.size()){
             for (Task task : allTasks){
+                Calendar date = Calendar.getInstance();
                 date.setTime(task.getDueDate().toDate());
                 lastCheckedDates.add(date);
             }
         }
 
-        for (int i = 0; i < allTasks.size(); i++){
+        /*for (int i = 0; i < allTasks.size(); i++){
             while(!lastCheckedDates.get(i).after(endDate)){
                 Task checkedTask = allTasks.get(i);
                 adapter.addTask(checkedTask, dateFormat.format(lastCheckedDates.get(i).getTime()));
                 lastCheckedDates.set(i, getNextDueDate(lastCheckedDates.get(i), checkedTask.getRepeatingMode(), checkedTask.getRepeatingValue(), true));
             }
+        }*/
+
+        while(true) {
+            Calendar smallestDate = Calendar.getInstance();
+            smallestDate.setTime(lastCheckedDates.get(0).getTime());
+            int index = 0;
+            for (int j = 1; j < lastCheckedDates.size(); j++) {
+                if (lastCheckedDates.get(j).before(smallestDate)) {
+                    smallestDate.setTime(lastCheckedDates.get(j).getTime());
+                    index = j;
+                }
+            }
+            if(!smallestDate.after(endDate)){
+                adapter.addTask(allTasks.get(index), dateFormat.format(lastCheckedDates.get(index).getTime()));
+                lastCheckedDates.set(index, getNextDueDate(smallestDate, allTasks.get(index).getRepeatingMode(), allTasks.get(index).getRepeatingValue(), true));
+            }
+            else break;
         }
     }
     private Calendar getNextDueDate(Calendar dueDate, String repeatingMode, List<Integer> repeatingValue, boolean flag){
 
-        dueDate.set(Calendar.HOUR_OF_DAY, 0);
-        dueDate.set(Calendar.MINUTE, 0);
         dueDate.set(Calendar.SECOND, 0);
         dueDate.set(Calendar.MILLISECOND, 0);
 
         if(repeatingMode.equals("weekly")){
             Collections.sort(repeatingValue);
-            int today = todayCalender.get(Calendar.DAY_OF_WEEK);
+            int today = dueDate.get(Calendar.DAY_OF_WEEK);
+            today -= 1;
+            if(today == 0){
+                today = 7;
+            }
+            int daysToAdd = 0;
+            for (int day : repeatingValue){
+                if(day > today){
+                    daysToAdd = day - today;
+                    break;
+                }
+            }
+            if(daysToAdd == 0){
+                daysToAdd = 7 - today + repeatingValue.get(0);
+            }
+            dueDate.add(Calendar.DAY_OF_YEAR, daysToAdd);
+
+
+            /*int today = todayCalender.get(Calendar.DAY_OF_WEEK);
             today -= 1;
             if(today == 0){
                 today = 7;
@@ -168,26 +207,24 @@ public class CalendarFragment extends Fragment {
             int numberOfDays = repeatingValue.get(0) - today;
 
             if(numberOfDays <= 0){
-                numberOfDays = repeatingValue.get(0) + 7;
+                numberOfDays = 7 - today + repeatingValue.get(0);
             }
             dueDate = (Calendar) todayCalender.clone();
-            dueDate.add(Calendar.DAY_OF_YEAR, numberOfDays);
+            dueDate.add(Calendar.DAY_OF_YEAR, numberOfDays);*/
         } else if(repeatingMode.equals("days")){
             int days = repeatingValue.get(0);
-            if(flag){
-                while (!dueDate.after(endDate)) {
-                    dueDate.add(Calendar.DAY_OF_YEAR, days);
-                    return dueDate;
-                }
+            if (flag) {
+                dueDate.add(Calendar.DAY_OF_YEAR, days);
             } else {
-                while (!dueDate.after(todayCalender)) {
+                Calendar calendar = Calendar.getInstance();
+                calendar.setTime(todayCalender.getTime());
+                calendar.set(Calendar.HOUR_OF_DAY, dueDate.get(Calendar.HOUR_OF_DAY));
+                calendar.set(Calendar.MINUTE, dueDate.get(Calendar.MINUTE));
+                while (!dueDate.after(calendar)) {
                     dueDate.add(Calendar.DAY_OF_YEAR, days);
-                    return dueDate;
                 }
             }
-
         }
-        Log.d("asdf", dueDate.getTime().toString());
         return dueDate;
     }
 
@@ -196,15 +233,22 @@ public class CalendarFragment extends Fragment {
         String groupId = sharedPreferences.getString("activeGroupId", null);
 
         if (groupId != null && task.getId() != null) {
-            // Convert Calendar back to Timestamp for Firestore
             Timestamp newDueDate = new Timestamp(nextDueDate.getTime());
 
-            // Update the task's due date in Firestore
             db.collection("groups").document(groupId)
                     .collection("tasks").document(task.getId())
                     .update("dueDate", newDueDate)
                     .addOnSuccessListener(aVoid -> Log.d("CalendarFragment", "Task due date successfully updated!"))
                     .addOnFailureListener(e -> Log.e("CalendarFragment", "Error updating task due date", e));
         }
+    }
+
+    private void setDaysToShow(){
+        int today = todayCalender.get(Calendar.DAY_OF_WEEK);
+        today -= 1;
+        if(today == 0){
+            today = 7;
+        }
+        daysToShow = -today;
     }
 }
