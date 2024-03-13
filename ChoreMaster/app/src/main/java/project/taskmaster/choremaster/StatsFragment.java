@@ -6,6 +6,7 @@ import android.os.Bundle;
 
 import androidx.fragment.app.Fragment;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -56,8 +57,8 @@ public class StatsFragment extends Fragment {
                                 if (userSnapshot.exists()) {
                                     String userName = userSnapshot.getString("username");
                                     Map<String, Object> userDetails = (Map<String, Object>) members.get(userId);
-                                    Long points = userDetails != null ? (Long) userDetails.get("points") : 0;
-
+                                    Long points = (Long) userDetails.get("points");
+                                    Log.d("TAG", String.valueOf(points));
                                     statsBuilder.append(userName).append(": ").append(points).append(" points\n");
 
                                     // Once all users are processed, set the text in textViewStats

@@ -50,7 +50,7 @@ public class CreateGroupActivity extends AppCompatActivity {
 
                 Map<String, Object> memberDetails = new HashMap<>();
                 memberDetails.put("role", "admin");
-                memberDetails.put("score", 0);
+                memberDetails.put("points", 0);
                 memberDetails.put("joinedDate", Timestamp.now());
 
                 Map<String, Object> members = new HashMap<>();

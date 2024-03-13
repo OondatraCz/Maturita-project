@@ -171,10 +171,9 @@ public class CreateTaskActivity extends AppCompatActivity {
                     return;
                 }
 
+                dueDateCalendar.set(Calendar.SECOND, 0);
+                dueDateCalendar.set(Calendar.MILLISECOND, 0);
                 Timestamp dueDateTimestamp = new Timestamp(dueDateCalendar.getTime());
-                dueDateCalendar.add(Calendar.DAY_OF_MONTH, 1);
-                Timestamp lastCompletedTimestamp = new Timestamp(dueDateCalendar.getTime());
-
 
                 taskMap.put("title", binding.edtName.getText().toString());
                 taskMap.put("description", binding.edtDescription.getText().toString());
@@ -182,7 +181,6 @@ public class CreateTaskActivity extends AppCompatActivity {
                 taskMap.put("dueDate", dueDateTimestamp);
                 taskMap.put("assignedTo", userIds.get(binding.spinnerMembers.getSelectedItemPosition()));
                 taskMap.put("createdBy", auth.getCurrentUser().getUid());
-                taskMap.put("lastCompleted", lastCompletedTimestamp);
                 taskMap.put("points", points);
 
                 int radioID = binding.radioGroup.getCheckedRadioButtonId();

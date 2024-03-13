@@ -152,7 +152,7 @@ public class SettingsFragment extends Fragment {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 sharedPreferences.edit().putString("activeGroupId", groupIds.get(position)).commit();
-                Toast.makeText(getActivity(), groupIds.get(position), Toast.LENGTH_SHORT).show();
+                //Toast.makeText(getActivity(), groupIds.get(position), Toast.LENGTH_SHORT).show();
                 //binding.txt.setText(groupIds.get(position)/*sharedPreferences.getString("activeGroupId", null)*/);
             }
             @Override
@@ -182,6 +182,7 @@ public class SettingsFragment extends Fragment {
                     Toast.makeText(getActivity(), "No group selected", Toast.LENGTH_SHORT).show();
                     return;
                 }
+
 
                 db.collection("groups").document(groupId)
                         .update("members." + userId, FieldValue.delete())

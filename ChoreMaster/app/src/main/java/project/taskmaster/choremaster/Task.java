@@ -3,6 +3,8 @@ package project.taskmaster.choremaster;
 
 import com.google.firebase.Timestamp;
 
+import java.sql.Time;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -16,11 +18,12 @@ public class Task {
     private String assignedTo;
     private String createdBy;
     private Timestamp dueDate;
-    private Timestamp lastCompleted;
+    private List<Timestamp> lastCompleted;
     private long points;
 
     @Override
     public String toString() {
+        String lastCompletedString = (lastCompleted == null) ? "null" : lastCompleted.toString();
         return "TaskModel{" +
                 "id='" + id +'\'' +
                 ", title='" + title + '\'' +
@@ -31,14 +34,30 @@ public class Task {
                 ", createdBy='" + createdBy + '\'' +
                 ", repetitionDetails=" + repeatingValue.toString() +
                 ", dueDate=" + dueDate +
-                ", lastCompleted=" + lastCompleted +
+                ", lastCompleted=" + lastCompletedString +
                 ", points=" + points +
                 '}';
     }
 
-    public Task(){}
+    public Task(){
+        lastCompleted = new ArrayList<>();
+    }
 
-    public Task(String title, String category, String description, String repeatingMode, String assignedTo, String createdBy, List<Integer> repeatingValue, Timestamp dueDate, Timestamp lastCompleted, long points) {
+    public Task(String id, String title, String category, String description, String repeatingMode, List<Integer> repeatingValue, String assignedTo, String createdBy, Timestamp dueDate, long points) {
+        this.id = id;
+        this.title = title;
+        this.category = category;
+        this.description = description;
+        this.repeatingMode = repeatingMode;
+        this.repeatingValue = repeatingValue;
+        this.assignedTo = assignedTo;
+        this.createdBy = createdBy;
+        this.dueDate = dueDate;
+        this.points = points;
+        this.lastCompleted = new ArrayList<>();
+    }
+
+    public Task(String title, String category, String description, String repeatingMode, String assignedTo, String createdBy, List<Integer> repeatingValue, Timestamp dueDate, List<Timestamp> lastCompleted, long points) {
         this.title = title;
         this.category = category;
         this.description = description;
@@ -123,11 +142,15 @@ public class Task {
         this.dueDate = dueDate;
     }
 
-    public Timestamp getLastCompleted() {
+    public List<Timestamp> getLastCompleted() {
         return lastCompleted;
     }
 
-    public void setLastCompleted(Timestamp lastCompleted) {
+    public void addLastCompleted(Timestamp lastCompleted){
+        this.lastCompleted.add(lastCompleted);
+    }
+
+    public void setLastCompleted(List<Timestamp> lastCompleted) {
         this.lastCompleted = lastCompleted;
     }
     public long getPoints() {

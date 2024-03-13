@@ -1,18 +1,24 @@
 package project.taskmaster.choremaster;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintSet;
 import androidx.core.content.ContextCompat;
 
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.provider.ContactsContract;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.DatePicker;
+import android.widget.LinearLayout;
 import android.widget.RadioGroup;
+import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
 
@@ -22,6 +28,8 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+
+import org.checkerframework.checker.units.qual.C;
 
 import java.sql.Time;
 import java.text.SimpleDateFormat;
@@ -98,8 +106,22 @@ public class TaskDetailActivity extends AppCompatActivity {
                                 selectedDays = new ArrayList<>();
                                 break;
                             default:
-                                Toast.makeText(TaskDetailActivity.this, "smth weird is happening", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(TaskDetailActivity.this, "easter egg - you broke the matrix", Toast.LENGTH_SHORT).show();
                         }
+
+                        if (myTask.getLastCompleted() != null && !myTask.getLastCompleted().isEmpty()) {
+                            for (Timestamp timestamp : myTask.getLastCompleted()) {
+                                TextView textView = new TextView(TaskDetailActivity.this);
+                                String formattedDate = new SimpleDateFormat("EEEE d.M yyyy", Locale.getDefault()).format(timestamp.toDate());
+                                textView.setText(formattedDate);
+                                textView.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+                                binding.linearLayout.addView(textView);
+                            }
+                            binding.txtLastCompleted.setText(new SimpleDateFormat("EEEE d.M yyyy", Locale.getDefault()).format(myTask.getLastCompleted().get(myTask.getLastCompleted().size() - 1).toDate()));
+                            binding.txtLastCompleted.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+                        }
+
+                        binding.linearLayout.setVisibility(View.INVISIBLE);
 
                         setEditable(false);
 
@@ -206,7 +228,7 @@ public class TaskDetailActivity extends AppCompatActivity {
 
                 Timestamp dueDateTimestamp = new Timestamp(dueDateCalendar.getTime());
                 dueDateCalendar.add(Calendar.DAY_OF_MONTH, 1);
-                Timestamp lastCompletedTimestamp = new Timestamp(dueDateCalendar.getTime());
+                myTask.addLastCompleted(new Timestamp(dueDateCalendar.getTime()));
 
                 taskMap.put("title", binding.edtName.getText().toString());
                 taskMap.put("description", binding.edtDesc.getText().toString());
@@ -214,7 +236,7 @@ public class TaskDetailActivity extends AppCompatActivity {
                 taskMap.put("dueDate", dueDateTimestamp);
                 taskMap.put("assignedTo", userIds.get(binding.userSpinner.getSelectedItemPosition()));
                 taskMap.put("createdBy", auth.getCurrentUser().getUid());
-                taskMap.put("lastCompleted", lastCompletedTimestamp);
+                taskMap.put("lastCompleted", myTask.getLastCompleted());
                 taskMap.put("points", points);
 
                 int radioID = binding.radioGroup.getCheckedRadioButtonId();
@@ -259,13 +281,18 @@ public class TaskDetailActivity extends AppCompatActivity {
                 SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd", Locale.getDefault());
                 String date = fmt.format(new Date());
 
-                if(fmt.format(myTask.getLastCompleted().toDate()).equals(date) || !fmt.format(myTask.getDueDate().toDate()).equals(date)){
+                if(myTask.getLastCompleted() != null && !myTask.getLastCompleted().isEmpty() && fmt.format(myTask.getLastCompleted().get(myTask.getLastCompleted().size() - 1).toDate()).equals(date))
+                {
                     Toast.makeText(TaskDetailActivity.this, "You cannot mark the task as completed", Toast.LENGTH_SHORT).show();
                     return;
                 }
 
-                Map<String, Object> update = new HashMap<>();
-                update.put("lastCompleted", new Timestamp(new Date()));
+                Map<String, Object> updateMap = new HashMap<>();
+                Calendar currentDate = Calendar.getInstance();
+                currentDate.set(Calendar.MILLISECOND, 0);
+                currentDate.set(Calendar.SECOND, 0);
+                myTask.addLastCompleted(new Timestamp(currentDate.getTime()));
+                updateMap.put("lastCompleted", myTask.getLastCompleted());
 
                 final String assignedUserId = myTask.getAssignedTo();
                 final DocumentReference groupRef = db.collection("groups").document(groupId);
@@ -283,10 +310,8 @@ public class TaskDetailActivity extends AppCompatActivity {
                         transaction.update(groupRef, "members", members);
                     }
 
-                    Map<String, Object> update1 = new HashMap<>();
-                    update1.put("lastCompleted", new Timestamp(new Date()));
                     DocumentReference taskRef = db.collection("groups").document(groupId).collection("tasks").document(taskId);
-                    transaction.update(taskRef, update1);
+                    transaction.update(taskRef, updateMap);
 
                     return null;
                 }).addOnCompleteListener(task -> {
@@ -298,6 +323,36 @@ public class TaskDetailActivity extends AppCompatActivity {
                         Toast.makeText(TaskDetailActivity.this, task.getException().getMessage(), Toast.LENGTH_SHORT).show();
                     }
                 });
+            }
+        });
+
+        binding.txtShowMore.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (myTask.getLastCompleted().isEmpty()){
+                    Toast.makeText(TaskDetailActivity.this, "The task hasn't been completed yet", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                if (binding.linearLayout.getVisibility() == View.INVISIBLE) {
+                    binding.linearLayout.setVisibility(View.VISIBLE);
+                    binding.txtShowMore.setText("Show less ▲");
+
+                    ConstraintSet constraintSet = new ConstraintSet();
+                    constraintSet.clone(binding.constraintLayout);
+                    constraintSet.connect(binding.btnSubmit.getId(), ConstraintSet.TOP, binding.linearLayout.getId(), ConstraintSet.BOTTOM, 16 * (int)getResources().getDisplayMetrics().density);
+                    constraintSet.connect(binding.btnComplete.getId(), ConstraintSet.TOP, binding.linearLayout.getId(), ConstraintSet.BOTTOM, 16 * (int)getResources().getDisplayMetrics().density);
+                    constraintSet.applyTo(binding.constraintLayout);
+                } else {
+                    binding.linearLayout.setVisibility(View.INVISIBLE);
+                    binding.txtShowMore.setText("Show more ▼");
+
+                    ConstraintSet constraintSet = new ConstraintSet();
+                    constraintSet.clone(binding.constraintLayout);
+                    constraintSet.connect(binding.btnSubmit.getId(), ConstraintSet.TOP, binding.textView10.getId(), ConstraintSet.BOTTOM, 24 * (int)getResources().getDisplayMetrics().density);
+                    constraintSet.connect(binding.btnComplete.getId(), ConstraintSet.TOP, binding.textView10.getId(), ConstraintSet.BOTTOM, 24 * (int)getResources().getDisplayMetrics().density);
+                    constraintSet.applyTo(binding.constraintLayout);
+                }
             }
         });
     }

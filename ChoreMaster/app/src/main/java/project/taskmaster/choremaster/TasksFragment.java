@@ -209,7 +209,7 @@ public class TasksFragment extends Fragment {
     private String GetCustomText(Task task) {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd", Locale.getDefault());
         String today = sdf.format(new Date());
-        String lastCompleted = sdf.format(task.getLastCompleted().toDate());
+        String lastCompleted = sdf.format(task.getLastCompleted().get(task.getLastCompleted().size() - 1).toDate());
         String dueDate = sdf.format(task.getDueDate().toDate());
 
         if ((lastCompleted.equals(dueDate) && task.getRepeatingMode() == "none") || (lastCompleted.equals(today) && dueDate.equals(today))) {

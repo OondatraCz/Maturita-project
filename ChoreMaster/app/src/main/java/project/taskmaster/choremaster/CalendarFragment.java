@@ -65,7 +65,6 @@ public class CalendarFragment extends Fragment {
         auth = FirebaseAuth.getInstance();
         sharedPreferences = getActivity().getSharedPreferences("ChoreMaster", Context.MODE_PRIVATE);
         dateFormat = new SimpleDateFormat("EEEE d.\nMMMM yyyy", Locale.getDefault());
-        timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
         todayCalender = Calendar.getInstance();
         todayCalender.set(Calendar.HOUR_OF_DAY, 0);
         todayCalender.set(Calendar.MINUTE, 0);
@@ -89,10 +88,14 @@ public class CalendarFragment extends Fragment {
                                     Task task = snapshot.toObject(Task.class);
                                     task.setId(snapshot.getId());
 
-                                    if(task.getRepeatingMode() != "none" && task.getDueDate().toDate().before(todayCalender.getTime())){
+                                    Date date = task.getDueDate().toDate();
+
+                                    if(task.getRepeatingMode() != "none" && date.before(todayCalender.getTime())){
                                         Calendar nextDueDate = Calendar.getInstance();
                                         nextDueDate.setTime(task.getDueDate().toDate());
                                         nextDueDate = getNextDueDate(todayCalender, task.getRepeatingMode(), task.getRepeatingValue(), false);
+                                        nextDueDate.set(Calendar.HOUR_OF_DAY, date.getHours());
+                                        nextDueDate.set(Calendar.MINUTE, date.getMinutes());
                                         updateTaskDueDate(task, nextDueDate);
                                         task.setDueDate(new Timestamp(nextDueDate.getTime()));
                                     }
