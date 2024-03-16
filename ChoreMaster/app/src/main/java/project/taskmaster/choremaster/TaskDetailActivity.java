@@ -155,7 +155,7 @@ public class TaskDetailActivity extends AppCompatActivity {
                     public void onTimeSet(TimePicker view, int hour, int minute) {
                         dueDateCalendar.set(Calendar.HOUR_OF_DAY, hour);
                         dueDateCalendar.set(Calendar.MINUTE, minute);
-                        binding.textViewTime.setText(dueDateCalendar.get(Calendar.HOUR_OF_DAY) + ":" + dueDateCalendar.get(Calendar.MINUTE));
+                        binding.textViewTime.setText(new SimpleDateFormat("hh:mm", Locale.getDefault()).format(dueDateCalendar.getTime()));
                     }
                 }, 12, 0, true);
 
@@ -172,7 +172,7 @@ public class TaskDetailActivity extends AppCompatActivity {
                         dueDateCalendar.set(Calendar.YEAR, year);
                         dueDateCalendar.set(Calendar.MONTH, month);
                         dueDateCalendar.set(Calendar.DAY_OF_MONTH, day);
-                        binding.textViewDate.setText(dueDateCalendar.get(Calendar.DAY_OF_MONTH) + "." + dueDateCalendar.get(Calendar.MONTH) + "." + dueDateCalendar.get(Calendar.YEAR));
+                        binding.textViewDate.setText(new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(dueDateCalendar.getTime()));
                     }
                 }, dueDateCalendar.get(Calendar.YEAR), dueDateCalendar.get(Calendar.MONTH), dueDateCalendar.get(Calendar.DAY_OF_MONTH));
 
@@ -227,8 +227,6 @@ public class TaskDetailActivity extends AppCompatActivity {
                 }
 
                 Timestamp dueDateTimestamp = new Timestamp(dueDateCalendar.getTime());
-                dueDateCalendar.add(Calendar.DAY_OF_MONTH, 1);
-                myTask.addLastCompleted(new Timestamp(dueDateCalendar.getTime()));
 
                 taskMap.put("title", binding.edtName.getText().toString());
                 taskMap.put("description", binding.edtDesc.getText().toString());
@@ -236,7 +234,6 @@ public class TaskDetailActivity extends AppCompatActivity {
                 taskMap.put("dueDate", dueDateTimestamp);
                 taskMap.put("assignedTo", userIds.get(binding.userSpinner.getSelectedItemPosition()));
                 taskMap.put("createdBy", auth.getCurrentUser().getUid());
-                taskMap.put("lastCompleted", myTask.getLastCompleted());
                 taskMap.put("points", points);
 
                 int radioID = binding.radioGroup.getCheckedRadioButtonId();

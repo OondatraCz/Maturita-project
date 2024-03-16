@@ -1,5 +1,6 @@
 package project.taskmaster.choremaster;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
@@ -32,6 +33,7 @@ public class ManageGroupActivity extends AppCompatActivity {
     private List<String> userNames;
     private List<String> groupIds;
     private List<String> groupNames;
+    private boolean actionMode = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,14 +63,14 @@ public class ManageGroupActivity extends AppCompatActivity {
             binding.btnSave.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    String name = binding.editTextName.getText().toString();
+                    String name = binding.editTextName.getText().toString().trim();
                     if (name.isEmpty()){
-                        Toast.makeText(ManageGroupActivity.this, "Name connot be empty", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(ManageGroupActivity.this, "Name can't be empty", Toast.LENGTH_SHORT).show();
                         return;
                     }
                     Map<String, Object> groupInfo = new HashMap<>();
                     groupInfo.put("name", name);
-                    groupInfo.put("description", binding.editTextDescription.getText().toString());
+                    groupInfo.put("description", binding.editTextDescription.getText().toString().trim());
                     db.collection("groups").document(groupId)
                             .update(groupInfo)
                             .addOnSuccessListener(aVoid -> {
@@ -82,6 +84,13 @@ public class ManageGroupActivity extends AppCompatActivity {
 
             setupRecyclerView();
             fetchGroupMembers();
+
+            binding.btnOption.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    actionMode = !actionMode;
+                }
+            });
         }
     }
 
@@ -91,11 +100,31 @@ public class ManageGroupActivity extends AppCompatActivity {
         binding.recyclerView.setAdapter(adapter);
         adapter.setClickListener((view, position) -> {
             String userId = userIds.get(position);
-
-            removeUserFromGroup(userId, position);
+            if(actionMode){
+                new AlertDialog.Builder(this)
+                        .setTitle("Remove User")
+                        .setMessage("Are you sure you want to remove this user from the group?")
+                        .setPositiveButton("Remove", (dialog, which) -> removeUserFromGroup(userId, position))
+                        .setNegativeButton("Cancel", null)
+                        .show();
+            }
+            else{
+                new AlertDialog.Builder(this)
+                        .setTitle("Change Role")
+                        .setMessage("Are you sure you want to change this user's role to member?")
+                        .setPositiveButton("Change", (dialog, which) -> changeUserRole(userId))
+                        .setNegativeButton("Cancel", null)
+                        .show();
+            }
         });
     }
 
+    private void changeUserRole(String userId) {
+        db.collection("groups").document(groupId)
+                .update("members." + userId + ".role", "member")
+                .addOnSuccessListener(aVoid -> Toast.makeText(this, "User role changed to member", Toast.LENGTH_SHORT).show())
+                .addOnFailureListener(e -> Toast.makeText(this, "Error changing user role", Toast.LENGTH_SHORT).show());
+    }
     private void fetchGroupMembers() {
         db.collection("groups").document(groupId)
                 .get()

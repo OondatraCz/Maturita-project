@@ -20,6 +20,8 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import org.checkerframework.checker.units.qual.C;
+
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -133,6 +135,11 @@ public class CalendarFragment extends Fragment {
     }
 
     private void loadTasks() {
+        if(allTasks.isEmpty()){
+            Toast.makeText(getActivity(), "There are no tasks in this group", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         daysToShow += 7;
         Toast.makeText(getActivity(), "Showing " + (int) Math.ceil((double) daysToShow / 7) + " weeks - " + daysToShow + " days ahead.", Toast.LENGTH_SHORT).show();
 
@@ -152,27 +159,28 @@ public class CalendarFragment extends Fragment {
             }
         }
 
-        /*for (int i = 0; i < allTasks.size(); i++){
-            while(!lastCheckedDates.get(i).after(endDate)){
-                Task checkedTask = allTasks.get(i);
-                adapter.addTask(checkedTask, dateFormat.format(lastCheckedDates.get(i).getTime()));
-                lastCheckedDates.set(i, getNextDueDate(lastCheckedDates.get(i), checkedTask.getRepeatingMode(), checkedTask.getRepeatingValue(), true));
-            }
-        }*/
-
         while(true) {
             Calendar smallestDate = Calendar.getInstance();
             smallestDate.setTime(lastCheckedDates.get(0).getTime());
             int index = 0;
-            for (int j = 1; j < lastCheckedDates.size(); j++) {
-                if (lastCheckedDates.get(j).before(smallestDate)) {
-                    smallestDate.setTime(lastCheckedDates.get(j).getTime());
-                    index = j;
+            for (int i = 1; i < lastCheckedDates.size(); i++) {
+                if (lastCheckedDates.get(i).before(smallestDate)) {
+                    smallestDate.setTime(lastCheckedDates.get(i).getTime());
+                    index = i;
                 }
             }
             if(!smallestDate.after(endDate)){
                 adapter.addTask(allTasks.get(index), dateFormat.format(lastCheckedDates.get(index).getTime()));
-                lastCheckedDates.set(index, getNextDueDate(smallestDate, allTasks.get(index).getRepeatingMode(), allTasks.get(index).getRepeatingValue(), true));
+                if(allTasks.get(index).getRepeatingMode().equals("none")){
+                    Calendar c = Calendar.getInstance();
+                    Date d = new Date();
+                    d.setYear(9999);
+                    c.setTime(d);
+                    lastCheckedDates.set(index, c);
+                }
+                else {
+                    lastCheckedDates.set(index, getNextDueDate(smallestDate, allTasks.get(index).getRepeatingMode(), allTasks.get(index).getRepeatingValue(), true));
+                }
             }
             else break;
         }
@@ -200,20 +208,6 @@ public class CalendarFragment extends Fragment {
                 daysToAdd = 7 - today + repeatingValue.get(0);
             }
             dueDate.add(Calendar.DAY_OF_YEAR, daysToAdd);
-
-
-            /*int today = todayCalender.get(Calendar.DAY_OF_WEEK);
-            today -= 1;
-            if(today == 0){
-                today = 7;
-            }
-            int numberOfDays = repeatingValue.get(0) - today;
-
-            if(numberOfDays <= 0){
-                numberOfDays = 7 - today + repeatingValue.get(0);
-            }
-            dueDate = (Calendar) todayCalender.clone();
-            dueDate.add(Calendar.DAY_OF_YEAR, numberOfDays);*/
         } else if(repeatingMode.equals("days")){
             int days = repeatingValue.get(0);
             if (flag) {

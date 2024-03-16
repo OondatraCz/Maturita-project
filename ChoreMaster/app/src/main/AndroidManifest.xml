@@ -53,14 +53,13 @@
             <!-- Intent filter for deep linking -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
-
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:host="chore-master-project.firebaseapp.com"
+                    android:host="chore-master-project.web.app"
                     android:pathPrefix="/joinGroup"
-                    android:scheme="app" />
+                    android:scheme="choremaster" />
             </intent-filter>
         </activity>
         <activity

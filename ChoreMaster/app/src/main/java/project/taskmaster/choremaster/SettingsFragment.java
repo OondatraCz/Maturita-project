@@ -319,7 +319,7 @@ public class SettingsFragment extends Fragment {
                                 String role = documentSnapshot.getString("members." + user.getUid() + ".role");
                                 if(role.equals("admin")){
                                     //String uuid = UUID.randomUUID().toString(); - jenom pokud bych chtěl řešit vypršení odkazu po určité době
-                                    String link = "app://chore-master-project.firebaseapp.com/joinGroup?groupId=" + sharedPreferences.getString("activeGroupId", null)/* + "&uuid=" + uuid*/;
+                                    String link = "https://chore-master-project.web.app/?groupId=" + sharedPreferences.getString("activeGroupId", null)/* + "&uuid=" + uuid*/;
 
                                     Intent sendIntent = new Intent();
                                     sendIntent.setAction(Intent.ACTION_SEND);
@@ -348,7 +348,6 @@ public class SettingsFragment extends Fragment {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         binding.groupSelectionSpinner.setAdapter(adapter);
         binding.groupSelectionSpinner.setSelection(groupIds.indexOf(sharedPreferences.getString("activeGroupId", null)));
-        //binding.txt.setText(sharedPreferences.getString("activeGroupId", null));
     }
     private void saveGroupIds() {
         SharedPreferences.Editor editor = sharedPreferences.edit();

@@ -46,7 +46,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (deepLink != null) {
             Uri data = Uri.parse(deepLink);
-            if ("chore-master-project.firebaseapp.com".equals(data.getHost()) && "/joinGroup".equals(data.getPath())) {
+            if ("chore-master-project.web.app".equals(data.getHost()) && "/joinGroup".equals(data.getPath())) {
                 addUserToGroup(data.getQueryParameter("groupId"));
             }
             sharedPreferences.edit().remove("deepLink").apply();
@@ -125,7 +125,7 @@ public class MainActivity extends AppCompatActivity {
                                 .update("groups", FieldValue.arrayUnion(groupId))
                                 .addOnSuccessListener(aVoid -> {
                                     Map<String, Object> userData = new HashMap<>();
-                                    userData.put("score", 0);
+                                    userData.put("points", 0);
                                     userData.put("joinedDate", new Timestamp(new Date()));
                                     userData.put("role", "member");
                                     db.collection("groups").document(groupId)
@@ -135,10 +135,6 @@ public class MainActivity extends AppCompatActivity {
                                                 sharedPreferences.edit().putString("activeGroupId", groupId).commit();
                                                 sharedPreferences.edit().putString("allGroupIds", sharedPreferences.getString("allGroupIds", null) + "," + groupId).commit();
                                                 sharedPreferences.edit().putString("allGroupNames", sharedPreferences.getString("allGroupNames", null) + "," + groupName).commit();
-
-                                                Log.d("idk", sharedPreferences.getString("allGroupNames", null));
-                                                Log.d("idk", groupId);
-                                                Log.d("idk", groupName);
                                             })
                                             .addOnFailureListener(e -> Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_SHORT).show());
                                 })

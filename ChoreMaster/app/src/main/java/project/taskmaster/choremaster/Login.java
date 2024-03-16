@@ -60,7 +60,6 @@ public class Login extends AppCompatActivity {
                         }
                     });
         }
-
     }
 
     @Override
@@ -70,7 +69,7 @@ public class Login extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         Uri data = getIntent().getData();
-        if (data != null && "chore-master-project.firebaseapp.com".equals(data.getHost()) && "/joinGroup".equals(data.getPath())) {
+        if (data != null && "chore-master-project.web.app".equals(data.getHost()) && "/joinGroup".equals(data.getPath())) {
             SharedPreferences sharedPreferences = getSharedPreferences("ChoreMaster", MODE_PRIVATE);
             SharedPreferences.Editor editor = sharedPreferences.edit();
             editor.putString("deepLink", data.toString());

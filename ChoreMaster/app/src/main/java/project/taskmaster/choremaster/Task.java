@@ -40,7 +40,7 @@ public class Task {
     }
 
     public Task(){
-        lastCompleted = new ArrayList<>();
+        this.lastCompleted = new ArrayList<>();
     }
 
     public Task(String id, String title, String category, String description, String repeatingMode, List<Integer> repeatingValue, String assignedTo, String createdBy, Timestamp dueDate, long points) {
