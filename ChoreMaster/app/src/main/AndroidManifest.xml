@@ -15,32 +15,43 @@
         android:theme="@style/Theme.Material3.Light"
         tools:targetApi="31">
         <activity
-            android:name=".ManageGroupActivity"
+            android:name=".ManageProfileActivity"
             android:exported="false" />
+        <activity
+            android:name=".ManageGroupActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
         <activity
             android:name=".TaskDetailActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait" />
         <activity
             android:name=".CreateGroupActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait" />
         <activity
             android:name=".SetUsernameActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait" />
         <activity
             android:name=".ForgotPasswordActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.Material3.Light.NoActionBar" />
         <activity
             android:name=".CreateTaskActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.Material3.Light.NoActionBar" />
         <activity
             android:name=".Register"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.Material3.Light.NoActionBar" />
         <activity
             android:name=".Login"
             android:exported="true"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.Material3.Light.NoActionBar">
 
             <!-- Intent filter for the app launcher -->
@@ -53,6 +64,7 @@
             <!-- Intent filter for deep linking -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
+
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
@@ -64,7 +76,8 @@
         </activity>
         <activity
             android:name=".MainActivity"
-            android:exported="true" />
+            android:exported="true"
+            android:screenOrientation="portrait" />
     </application>
 
 </manifest>

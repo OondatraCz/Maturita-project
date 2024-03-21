@@ -26,11 +26,13 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 import org.checkerframework.checker.units.qual.C;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import project.taskmaster.choremaster.databinding.ActivityCreateTaskBinding;
@@ -61,20 +63,9 @@ public class CreateTaskActivity extends AppCompatActivity {
         ArrayAdapter<String> categoryAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, categories);
         categoryAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         binding.spinnerCategory.setAdapter(categoryAdapter);
-
-        binding.recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        UserAdapter adapter = new UserAdapter(this, new ArrayList<>());
-        binding.recyclerView.setAdapter(adapter);
         binding.spinnerCategory.setSelection(0);
 
         fetchGroupMembersAndPopulateSpinner();
-
-        adapter.setClickListener(new UserAdapter.ItemClickListener() {
-            @Override
-            public void onItemClick(View view, int position) {
-                adapter.removeUser(position);
-            }
-        });
 
         binding.spinnerMembers.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
@@ -88,17 +79,9 @@ public class CreateTaskActivity extends AppCompatActivity {
             }
         });
 
-        binding.btnAddUser.setOnClickListener(v -> {
-            if (selectedUser != null && !selectedUser.isEmpty()) {
-                adapter.addUser(selectedUser);
-            } else {
-                Toast.makeText(CreateTaskActivity.this, "No user selected", Toast.LENGTH_SHORT).show();
-            }
-        });
-
         Calendar dueDateCalendar = Calendar.getInstance();
 
-        binding.textViewDate.setText(dueDateCalendar.get(Calendar.DAY_OF_MONTH) + "." + dueDateCalendar.get(Calendar.MONTH) + "." + dueDateCalendar.get(Calendar.YEAR));
+        binding.textViewDate.setText(new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(dueDateCalendar.getTime()));
 
         binding.btnDate.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -109,7 +92,7 @@ public class CreateTaskActivity extends AppCompatActivity {
                         dueDateCalendar.set(Calendar.YEAR, year);
                         dueDateCalendar.set(Calendar.MONTH, month);
                         dueDateCalendar.set(Calendar.DAY_OF_MONTH, day);
-                        binding.textViewDate.setText(dueDateCalendar.get(Calendar.DAY_OF_MONTH) + "." + dueDateCalendar.get(Calendar.MONTH) + "." + dueDateCalendar.get(Calendar.YEAR));
+                        binding.textViewDate.setText(new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(dueDateCalendar.getTime()));
                     }
                 }, dueDateCalendar.get(Calendar.YEAR), dueDateCalendar.get(Calendar.MONTH), dueDateCalendar.get(Calendar.DAY_OF_MONTH));
 
@@ -125,7 +108,7 @@ public class CreateTaskActivity extends AppCompatActivity {
                     public void onTimeSet(TimePicker view, int hour, int minute) {
                         dueDateCalendar.set(Calendar.HOUR_OF_DAY, hour);
                         dueDateCalendar.set(Calendar.MINUTE, minute);
-                        binding.textViewTime.setText(dueDateCalendar.get(Calendar.HOUR_OF_DAY) + ":" + dueDateCalendar.get(Calendar.MINUTE));
+                        binding.textViewTime.setText(new SimpleDateFormat("hh:mm", Locale.getDefault()).format(dueDateCalendar.getTime()));
                     }
                 }, 12, 0, true);
 

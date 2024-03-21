@@ -10,6 +10,8 @@ import android.text.TextUtils;
 import android.view.View;
 import android.widget.Toast;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -27,12 +29,14 @@ public class ManageGroupActivity extends AppCompatActivity {
     private ActivityManageGroupBinding binding;
     private FirebaseFirestore db;
     private UserAdapter adapter;
-    private String groupId; // This should be the ID of the currently selected group
+    private String groupId;
     private SharedPreferences sharedPreferences;
+    private FirebaseAuth auth;
     private List<String> userIds;
     private List<String> userNames;
     private List<String> groupIds;
     private List<String> groupNames;
+    private List<String> roleList;
     private boolean actionMode = true;
 
     @Override
@@ -40,6 +44,7 @@ public class ManageGroupActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         binding = ActivityManageGroupBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+        auth = FirebaseAuth.getInstance();
 
         db = FirebaseFirestore.getInstance();
         sharedPreferences = getSharedPreferences("ChoreMaster", MODE_PRIVATE);
@@ -59,6 +64,7 @@ public class ManageGroupActivity extends AppCompatActivity {
 
         if(!groupId.equals(null)){
             userNames = new ArrayList<>();
+            roleList = new ArrayList<>();
 
             binding.btnSave.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -89,13 +95,20 @@ public class ManageGroupActivity extends AppCompatActivity {
                 @Override
                 public void onClick(View v) {
                     actionMode = !actionMode;
+                    adapter.setActionMode(actionMode);
+
+                    if (actionMode) {
+                        binding.txtOption.setText("Removal Mode");
+                    } else {
+                        binding.txtOption.setText("Role Change Mode");
+                    }
                 }
             });
         }
     }
 
     private void setupRecyclerView() {
-        adapter = new UserAdapter(this, new ArrayList<>());
+        adapter = new UserAdapter(this, userNames, roleList, actionMode);
         binding.recyclerView.setLayoutManager(new LinearLayoutManager(this));
         binding.recyclerView.setAdapter(adapter);
         adapter.setClickListener((view, position) -> {
@@ -109,20 +122,34 @@ public class ManageGroupActivity extends AppCompatActivity {
                         .show();
             }
             else{
-                new AlertDialog.Builder(this)
-                        .setTitle("Change Role")
-                        .setMessage("Are you sure you want to change this user's role to member?")
-                        .setPositiveButton("Change", (dialog, which) -> changeUserRole(userId))
-                        .setNegativeButton("Cancel", null)
-                        .show();
+                if(roleList.get(position).equals("admin")){
+                    new AlertDialog.Builder(this)
+                            .setTitle("Change Role")
+                            .setMessage("Are you sure you want to change this user's role to member?")
+                            .setPositiveButton("Change", (dialog, which) -> changeUserRole(userId, "member"))
+                            .setNegativeButton("Cancel", null)
+                            .show();
+                }
+                else{
+                    new AlertDialog.Builder(this)
+                            .setTitle("Change Role")
+                            .setMessage("Are you sure you want to change this user's role to admin?")
+                            .setPositiveButton("Change", (dialog, which) -> changeUserRole(userId, "admin"))
+                            .setNegativeButton("Cancel", null)
+                            .show();
+                }
             }
         });
     }
 
-    private void changeUserRole(String userId) {
+    private void changeUserRole(String userId, String userRole) {
+        if (userId.equals(auth.getCurrentUser().getUid())){
+            Toast.makeText(ManageGroupActivity.this, "You can't make yourself member", Toast.LENGTH_SHORT).show();
+            return;
+        }
         db.collection("groups").document(groupId)
-                .update("members." + userId + ".role", "member")
-                .addOnSuccessListener(aVoid -> Toast.makeText(this, "User role changed to member", Toast.LENGTH_SHORT).show())
+                .update("members." + userId + ".role", userRole)
+                .addOnSuccessListener(aVoid -> Toast.makeText(this, "User role changed", Toast.LENGTH_SHORT).show())
                 .addOnFailureListener(e -> Toast.makeText(this, "Error changing user role", Toast.LENGTH_SHORT).show());
     }
     private void fetchGroupMembers() {
@@ -135,6 +162,10 @@ public class ManageGroupActivity extends AppCompatActivity {
                         binding.editTextDescription.setText(documentSnapshot.getString("description"));
                         if (members != null) {
                             userIds = new ArrayList<>(members.keySet());
+                            for (String userId : userIds) {
+                                Map<String, String> memberDetails = (Map<String, String>) members.get(userId);
+                                roleList.add(memberDetails.get("role"));
+                            }
                             fetchUserNames();
                         }
                     } else {
@@ -145,6 +176,10 @@ public class ManageGroupActivity extends AppCompatActivity {
     }
 
     private void removeUserFromGroup(String userId, int position) {
+        if (userId.equals(auth.getCurrentUser().getUid())){
+            Toast.makeText(ManageGroupActivity.this, "You can't remove yourself from the group", Toast.LENGTH_SHORT).show();
+            return;
+        }
         db.collection("groups").document(groupId)
                 .update("members." + userId, FieldValue.delete())
                 .addOnSuccessListener(aVoid -> {
@@ -152,11 +187,6 @@ public class ManageGroupActivity extends AppCompatActivity {
                             .update("groups", FieldValue.arrayRemove(groupId))
                             .addOnSuccessListener(bVoid -> {
                                 adapter.removeUser(position);
-                                groupNames.remove(groupIds.indexOf(groupId));
-                                groupIds.remove(groupId);
-
-                                sharedPreferences.edit().putString("allGroupIds", TextUtils.join(",", groupIds)).commit();
-                                sharedPreferences.edit().putString("allGroupNames", TextUtils.join(",", groupNames)).commit();
                                 Toast.makeText(this, "User removed from group", Toast.LENGTH_SHORT).show();
                             })
                             .addOnFailureListener(e -> Toast.makeText(this, "Error removing user", Toast.LENGTH_SHORT).show());
@@ -173,7 +203,7 @@ public class ManageGroupActivity extends AppCompatActivity {
 
                             if(users.size() == userIds.size()){
                                 for (String userId : userIds){
-                                    adapter.addUser(users.get(userId));
+                                    adapter.addUser(users.get(userId), roleList.get(userIds.indexOf(userId)));
                                 }
                             }
                         }

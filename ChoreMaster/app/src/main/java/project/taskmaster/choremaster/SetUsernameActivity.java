@@ -31,7 +31,8 @@ public class SetUsernameActivity extends AppCompatActivity {
         binding.Submit.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String username = binding.username.getText().toString();
+                String username = binding.username.getText().toString().trim();
+                String bio = binding.bio.getText().toString().trim();
 
                 if (!username.matches(".*\\p{L}+.*")) {
                     Toast.makeText(SetUsernameActivity.this, "Nickname must contain letters!", Toast.LENGTH_SHORT).show();
@@ -45,6 +46,10 @@ public class SetUsernameActivity extends AppCompatActivity {
                     Toast.makeText(SetUsernameActivity.this, "Nickname must be maximally 20 characters long!", Toast.LENGTH_SHORT).show();
                     return;
                 }
+                if (bio.length() > 100){
+                    Toast.makeText(SetUsernameActivity.this, "Bio must be maximally 100 characters long!", Toast.LENGTH_SHORT).show();
+                    return;
+                }
 
                 FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
                 if (currentUser != null) {
@@ -52,7 +57,7 @@ public class SetUsernameActivity extends AppCompatActivity {
 
                     Map<String, Object> defaultGroup = new HashMap<>();
                     defaultGroup.put("name", "My group");
-                    defaultGroup.put("description", "-");
+                    defaultGroup.put("description", "");
                     //defaultGroup.put("members", Collections.singletonMap(userId, new MemberDetails()));
 
                     Map<String, Object> memberDetails = new HashMap<>();
@@ -71,7 +76,7 @@ public class SetUsernameActivity extends AppCompatActivity {
                             .addOnSuccessListener(documentReference -> {
                                 Map<String, Object> userData = new HashMap<>();
                                 userData.put("username", username);
-                                userData.put("bio", binding.bio.getText().toString());
+                                userData.put("bio", bio);
                                 userData.put("groups", Collections.singletonList(documentReference.getId()));
 
                                 db.collection("users").document(userId)

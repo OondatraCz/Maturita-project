@@ -26,46 +26,38 @@ public class Login extends AppCompatActivity {
     FirebaseAuth mAuth;
 
     @Override
-    public void onStart() {
-        super.onStart();
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        binding = ActivityLoginBinding.inflate(getLayoutInflater());
+
+        mAuth = FirebaseAuth.getInstance();
         FirebaseUser currentUser = mAuth.getCurrentUser();
-        if(currentUser != null){
-            Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-            startActivity(intent);
-            finish();
-        }
 
         if (currentUser != null) {
             FirebaseFirestore db = FirebaseFirestore.getInstance();
             String userId = currentUser.getUid();
 
             db.collection("users").document(userId).get()
-                    .addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
-                        @Override
-                        public void onComplete(@NonNull Task<DocumentSnapshot> task) {
-                            if (task.isSuccessful()) {
-                                DocumentSnapshot document = task.getResult();
-                                if (document.exists() && document.getData().containsKey("groups")) {
-                                    Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-                                    startActivity(intent);
-                                    finish();
-                                } else {
-                                    Intent intent = new Intent(getApplicationContext(), SetUsernameActivity.class);
-                                    startActivity(intent);
-                                    finish();
-                                }
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            DocumentSnapshot document = task.getResult();
+                            if (document.exists() && document.getData().containsKey("groups")) {
+                                Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+                                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                startActivity(intent);
                             } else {
-                                Toast.makeText(Login.this, "Failed to check user data: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                                Intent intent = new Intent(getApplicationContext(), SetUsernameActivity.class);
+                                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                startActivity(intent);
                             }
+                        } else {
+                            Toast.makeText(Login.this, "Failed to check user data: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
                         }
                     });
         }
-    }
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        binding = ActivityLoginBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
         Uri data = getIntent().getData();
@@ -75,8 +67,6 @@ public class Login extends AppCompatActivity {
             editor.putString("deepLink", data.toString());
             editor.apply();
         }
-
-        mAuth = FirebaseAuth.getInstance();
 
         binding.registerNow.setOnClickListener(new View.OnClickListener() {
             @Override

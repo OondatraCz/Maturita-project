@@ -1,14 +1,17 @@
 package project.taskmaster.choremaster;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintSet;
 import androidx.core.content.ContextCompat;
 
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.provider.ContactsContract;
+import android.text.TextUtils;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
@@ -55,6 +58,9 @@ public class TaskDetailActivity extends AppCompatActivity {
     private List<Integer> selectedDays;
     private List<String> userIds;
     private Task myTask;
+    String userRole = "member";
+    String groupId;
+    String taskId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,8 +73,8 @@ public class TaskDetailActivity extends AppCompatActivity {
         sharedPreferences = getSharedPreferences("ChoreMaster", MODE_PRIVATE);
 
         ArrayList<String> categories = new ArrayList<>(Arrays.asList("Basic", "Home", "Work", "Personal", "Shopping"));
-        String taskId = getIntent().getStringExtra("taskId");
-        String groupId = sharedPreferences.getString("activeGroupId", null);
+        taskId = getIntent().getStringExtra("taskId");
+        groupId = sharedPreferences.getString("activeGroupId", null);
         ArrayAdapter<String> categoryAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, categories);
         categoryAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         binding.spinnerCategory.setAdapter(categoryAdapter);
@@ -78,6 +84,40 @@ public class TaskDetailActivity extends AppCompatActivity {
                 .addOnSuccessListener(documentSnapshot -> {
                     myTask = documentSnapshot.toObject(Task.class);
                     if (myTask != null) {
+
+                        db.collection("groups").document(groupId)
+                                .get()
+                                .addOnSuccessListener(snapshot -> {
+                                    if (snapshot.exists()) {
+                                        Map<String, Object> members = (Map<String, Object>) snapshot.get("members");
+                                        if (members != null && members.containsKey(auth.getCurrentUser().getUid())) {
+                                            Map<String, String> userDetails = (Map<String, String>) members.get(auth.getCurrentUser().getUid());
+                                            userRole = userDetails.get("role");
+                                            setButtonVisibility(userRole, myTask);
+                                        }
+                                        else{
+                                            String storedString = sharedPreferences.getString("allGroupIds", "");
+                                            List<String> allGroupIds = new ArrayList<>(Arrays.asList(storedString.split(",")));
+                                            storedString = sharedPreferences.getString("allGroupNames", "");
+                                            List<String> allGroupNames = new ArrayList<>(Arrays.asList(storedString.split(",")));
+                                            allGroupNames.remove(allGroupIds.indexOf(groupId));
+                                            sharedPreferences.edit().putString("allGroupNames", TextUtils.join(",", allGroupNames)).apply();
+                                            sharedPreferences.edit().putString("allGroupIds", TextUtils.join(",", allGroupNames)).apply();
+
+                                            if (allGroupIds.size() == 0){
+                                                sharedPreferences.edit().remove("activeGroupId");
+
+                                                //Intent intent = new Intent();
+                                            }
+                                            else{
+                                                sharedPreferences.edit().putString("activeGroupId", allGroupIds.get(0)).commit();
+                                            }
+                                        }
+                                    }
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.e("TAG", "Error getting group details: ", e);
+                                });
 
                         binding.edtName.setText(myTask.getTitle());
                         binding.edtDesc.setText(myTask.getDescription());
@@ -124,11 +164,6 @@ public class TaskDetailActivity extends AppCompatActivity {
                         binding.linearLayout.setVisibility(View.INVISIBLE);
 
                         setEditable(false);
-
-                        if (isOwner(myTask)) {
-                            binding.btnEdit.setVisibility(View.VISIBLE);
-                            binding.btnDelete.setVisibility(View.VISIBLE);
-                        }
                     }
                 })
                 .addOnFailureListener(e -> {
@@ -138,12 +173,12 @@ public class TaskDetailActivity extends AppCompatActivity {
         binding.btnDelete.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                db.collection("groups").document(groupId).collection("tasks").document(taskId).delete()
-                        .addOnSuccessListener(aVoid -> {
-                            Toast.makeText(TaskDetailActivity.this, "Task deleted sucesfully", Toast.LENGTH_SHORT).show();
-                            finish();
-                        })
-                        .addOnFailureListener(e -> Toast.makeText(TaskDetailActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show());
+                new AlertDialog.Builder(TaskDetailActivity.this)
+                        .setTitle("Delete Task")
+                        .setMessage("Are you sure you want to delete this task?")
+                        .setPositiveButton("Delete", (dialog, which) -> deleteTask())
+                        .setNegativeButton("Cancel", null)
+                        .show();
             }
         });
 
@@ -353,6 +388,14 @@ public class TaskDetailActivity extends AppCompatActivity {
             }
         });
     }
+    private void deleteTask(){
+        db.collection("groups").document(groupId).collection("tasks").document(taskId).delete()
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(TaskDetailActivity.this, "Task deleted successfully", Toast.LENGTH_SHORT).show();
+                    finish();
+                })
+                .addOnFailureListener(e -> Toast.makeText(TaskDetailActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show());
+    }
     public void onBtnDayClicked(View view){
         Button clickedButton = (Button)view;
         String day = clickedButton.getText().toString();
@@ -430,9 +473,15 @@ public class TaskDetailActivity extends AppCompatActivity {
         binding.edtRepeateVal.setEnabled(isEditable);
     }
 
-    private boolean isOwner(Task task) {
-        FirebaseUser currentUser = auth.getCurrentUser();
-        return currentUser != null && task.getCreatedBy().equals(currentUser.getUid());
+    private void setButtonVisibility(String userRole, Task task) {
+        boolean isOwner = task.getCreatedBy().equals(auth.getCurrentUser().getUid());
+        if (isOwner || "admin".equals(userRole)) {
+            binding.btnEdit.setVisibility(View.VISIBLE);
+            binding.btnDelete.setVisibility(View.VISIBLE);
+        } else {
+            binding.btnEdit.setVisibility(View.GONE);
+            binding.btnDelete.setVisibility(View.GONE);
+        }
     }
 
     private void fetchGroupMembersAndPopulateSpinner() {

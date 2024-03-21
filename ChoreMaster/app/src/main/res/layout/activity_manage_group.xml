@@ -98,7 +98,7 @@
         android:ellipsize="end"
         android:textAlignment="center"
         android:layout_height="wrap_content"
-        android:text="By clicking the trash can icon you kick the user from the group"
+        android:text="Removal Mode"
         app:layout_constraintBottom_toBottomOf="@+id/btnOption"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="@+id/guideline"

@@ -40,7 +40,7 @@ public class Register extends AppCompatActivity {
         binding.btnLogin.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String email = String.valueOf(binding.email.getText());
+                String email = binding.email.getText().toString().trim();
                 String password = String.valueOf(binding.password.getText());
                 String password2 = String.valueOf(binding.rePassword.getText());
                 if(!email.contains("@") || !email.contains(".")) {

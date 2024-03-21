@@ -142,16 +142,18 @@ public class SettingsFragment extends Fragment {
         if (user == null) {
             Intent intent = new Intent(getActivity(), Login.class);
             startActivity(intent);
-        } else{
+        } else {
             //binding.txt.setText(user.getEmail());
         }
 
         populateGroupSpinner();
+        getGroupDescription();
 
         binding.groupSelectionSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 sharedPreferences.edit().putString("activeGroupId", groupIds.get(position)).commit();
+                getGroupDescription();
                 //Toast.makeText(getActivity(), groupIds.get(position), Toast.LENGTH_SHORT).show();
                 //binding.txt.setText(groupIds.get(position)/*sharedPreferences.getString("activeGroupId", null)*/);
             }
@@ -260,8 +262,7 @@ public class SettingsFragment extends Fragment {
                                                                             }
                                                                         }
                                                                     });
-                                                        });
-                                                // TODO - vyresit tasky smazaneho uzivatele! vyresit predani role moda! vyresit samzani skupiny kdyz je prazdna - staci checknout jestli to userId je tam jenom jedno predtim nez se maze.
+                                                        }); //TODO - povolit uzivateli leavnout jenom pokud tam je jeste nejakej admin
                                             }
 
 
@@ -309,6 +310,13 @@ public class SettingsFragment extends Fragment {
             }
         });
 
+        binding.btnManageProfile.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(getActivity(), ManageProfileActivity.class));
+            }
+        });
+
         binding.btnInviteUser.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -348,6 +356,23 @@ public class SettingsFragment extends Fragment {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         binding.groupSelectionSpinner.setAdapter(adapter);
         binding.groupSelectionSpinner.setSelection(groupIds.indexOf(sharedPreferences.getString("activeGroupId", null)));
+    }
+
+    private void getGroupDescription(){
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        String groupId = sharedPreferences.getString("activeGroupId", null);
+        if(groupId == null){
+            return;
+        }
+        db.collection("groups").document(groupId).get()
+                .addOnCompleteListener(snapshot -> {
+                    if (snapshot.isSuccessful()){
+                        binding.txtDesc.setText(snapshot.getResult().getString("description"));
+                    }
+                    else{
+                        Toast.makeText(getActivity(), "Failed to get group description", Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
     private void saveGroupIds() {
         SharedPreferences.Editor editor = sharedPreferences.edit();

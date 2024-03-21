@@ -10,17 +10,22 @@ import android.widget.TextView;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.List;
+import java.util.Map;
 
 public class UserAdapter extends RecyclerView.Adapter<UserAdapter.ViewHolder> {
 
     private List<String> userList;
+    private List<String> userRoles;
     private LayoutInflater mInflater;
     private ItemClickListener mClickListener;
+    private boolean actionMode; // Variable to keep track of the current mode
 
-    // Data is passed into the constructor
-    UserAdapter(Context context, List<String> data) {
+    // Modified constructor to include userRoles and actionMode
+    UserAdapter(Context context, List<String> data, List<String> userRoles, boolean actionMode) {
         this.mInflater = LayoutInflater.from(context);
         this.userList = data;
+        this.userRoles = userRoles;
+        this.actionMode = actionMode;
     }
 
     // Inflates the row layout from xml when needed
@@ -33,11 +38,21 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.ViewHolder> {
     // Binds the data to the TextView in each row
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
-        String user = userList.get(position);
-        holder.textViewUserName.setText(user);
+        holder.textViewUserName.setText(userList.get(position));
+
+        String role = userRoles.get(position);
+
+        if (actionMode) {
+            holder.buttonDelete.setImageResource(R.drawable.baseline_delete_24);
+        } else {
+            if ("admin".equals(role)) {
+                holder.buttonDelete.setImageResource(R.drawable.baseline_remove_24);
+            } else {
+                holder.buttonDelete.setImageResource(R.drawable.baseline_add_24);
+            }
+        }
     }
 
-    // Total number of rows
     @Override
     public int getItemCount() {
         return userList.size();
@@ -61,31 +76,36 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.ViewHolder> {
         }
     }
 
-    // Convenience method for getting data at click position
-    String getItem(int id) {
-        return userList.get(id);
-    }
-
-    // Allows click events to be caught
     void setClickListener(ItemClickListener itemClickListener) {
         this.mClickListener = itemClickListener;
     }
 
-    // Parent activity will implement this method to respond to click events
     public interface ItemClickListener {
         void onItemClick(View view, int position);
     }
 
-    public void addUser(String user) {
+    public void addUser(String user, String role) {
         this.userList.add(user);
+        this.userRoles.add(role);
         notifyItemInserted(this.userList.size() - 1);
     }
 
-    // Method to remove a user
     public void removeUser(int position) {
         if (position >= 0 && position < userList.size()) {
             this.userList.remove(position);
             notifyItemRemoved(position);
         }
+    }
+    public void setActionMode(boolean actionMode) {
+        this.actionMode = actionMode;
+        notifyDataSetChanged();
+    }
+    public boolean getActionMode(){
+        return actionMode;
+    }
+
+    public void setUserRoles(List<String> userRoles) {
+        this.userRoles = userRoles;
+        notifyDataSetChanged();
     }
 }
