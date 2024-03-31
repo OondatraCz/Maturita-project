@@ -39,6 +39,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -61,6 +62,7 @@ public class TaskDetailActivity extends AppCompatActivity {
     String userRole = "member";
     String groupId;
     String taskId;
+    private Calendar todayCalender;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,6 +71,7 @@ public class TaskDetailActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
         auth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
+        todayCalender = Calendar.getInstance();
 
         sharedPreferences = getSharedPreferences("ChoreMaster", MODE_PRIVATE);
 
@@ -83,6 +86,7 @@ public class TaskDetailActivity extends AppCompatActivity {
         db.collection("groups").document(groupId).collection("tasks").document(taskId).get()
                 .addOnSuccessListener(documentSnapshot -> {
                     myTask = documentSnapshot.toObject(Task.class);
+                    myTask.setId(documentSnapshot.getId());
                     if (myTask != null) {
 
                         db.collection("groups").document(groupId)
@@ -107,7 +111,10 @@ public class TaskDetailActivity extends AppCompatActivity {
                                             if (allGroupIds.size() == 0){
                                                 sharedPreferences.edit().remove("activeGroupId");
 
-                                                //Intent intent = new Intent();
+                                                Intent intent = new Intent(getApplicationContext(), SetUsernameActivity.class);
+                                                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                                                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                                startActivity(intent);
                                             }
                                             else{
                                                 sharedPreferences.edit().putString("activeGroupId", allGroupIds.get(0)).commit();
@@ -119,6 +126,22 @@ public class TaskDetailActivity extends AppCompatActivity {
                                     Log.e("TAG", "Error getting group details: ", e);
                                 });
 
+                        Date date = myTask.getDueDate().toDate();
+
+                        if(myTask.getRepeatingMode() != "none" && date.before(todayCalender.getTime())){
+                            Calendar nextDueDate = Calendar.getInstance();
+                            nextDueDate.setTime(myTask.getDueDate().toDate());
+                            if(myTask.getRepeatingMode().equals("weekly")){
+                                nextDueDate = getNextDueDate(todayCalender, myTask.getRepeatingMode(), myTask.getRepeatingValue());
+                            } else {
+                                nextDueDate = getNextDueDate(nextDueDate, myTask.getRepeatingMode(), myTask.getRepeatingValue());
+                            }
+                            nextDueDate.set(Calendar.HOUR_OF_DAY, date.getHours());
+                            nextDueDate.set(Calendar.MINUTE, date.getMinutes());
+                            updateTaskDueDate(myTask, nextDueDate);
+                            myTask.setDueDate(new Timestamp(nextDueDate.getTime()));
+                        }
+
                         binding.edtName.setText(myTask.getTitle());
                         binding.edtDesc.setText(myTask.getDescription());
                         binding.spinnerCategory.setSelection(categories.indexOf(myTask.getCategory()));
@@ -128,8 +151,6 @@ public class TaskDetailActivity extends AppCompatActivity {
                         binding.textViewDate.setText(new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(myTask.getDueDate().toDate()));
 
                         fetchGroupMembersAndPopulateSpinner();
-
-                        Log.d("a", myTask.toString());
 
                         switch (myTask.getRepeatingMode()){
                             case "days":
@@ -245,6 +266,16 @@ public class TaskDetailActivity extends AppCompatActivity {
                 Map<String, Object> taskMap = new HashMap<>();
                 if(binding.edtName.getText().toString().trim().isEmpty()){
                     Toast.makeText(TaskDetailActivity.this, "Nezadali jste jméno!", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                Calendar todayCalendar = Calendar.getInstance();
+                todayCalendar.set(Calendar.HOUR_OF_DAY, 0);
+                todayCalendar.set(Calendar.MINUTE, 0);
+                todayCalendar.set(Calendar.SECOND, 0);
+                todayCalendar.set(Calendar.MILLISECOND, 0);
+                if (dueDateCalendar.before(todayCalendar)) {
+                    Toast.makeText(TaskDetailActivity.this, "The due date can not be in the past!", Toast.LENGTH_SHORT).show();
                     return;
                 }
 
@@ -535,5 +566,53 @@ public class TaskDetailActivity extends AppCompatActivity {
             });
         }
     }
+    private Calendar getNextDueDate(Calendar dueDate, String repeatingMode, List<Integer> repeatingValue){
 
+        dueDate.set(Calendar.SECOND, 0);
+        dueDate.set(Calendar.MILLISECOND, 0);
+
+        if(repeatingMode.equals("weekly")){
+            Collections.sort(repeatingValue);
+            int today = dueDate.get(Calendar.DAY_OF_WEEK);
+            today -= 1;
+            if(today == 0){
+                today = 7;
+            }
+            int daysToAdd = 0;
+            for (int day : repeatingValue){
+                if(day > today){
+                    daysToAdd = day - today;
+                    break;
+                }
+            }
+            if(daysToAdd == 0){
+                daysToAdd = 7 - today + repeatingValue.get(0);
+            }
+            dueDate.add(Calendar.DAY_OF_YEAR, daysToAdd);
+        } else if(repeatingMode.equals("days")){
+            int days = repeatingValue.get(0);
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTime(todayCalender.getTime());
+            calendar.set(Calendar.HOUR_OF_DAY, 0);
+            calendar.set(Calendar.MINUTE, 0);
+            while (!dueDate.after(calendar)) {
+                dueDate.add(Calendar.DAY_OF_YEAR, days);
+            }
+        }
+        return dueDate;
+    }
+    private void updateTaskDueDate(Task task, Calendar nextDueDate) {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        String groupId = sharedPreferences.getString("activeGroupId", null);
+
+        if (groupId != null && task.getId() != null) {
+            Timestamp newDueDate = new Timestamp(nextDueDate.getTime());
+
+            db.collection("groups").document(groupId)
+                    .collection("tasks").document(task.getId())
+                    .update("dueDate", newDueDate)
+                    .addOnSuccessListener(aVoid -> Log.d("CalendarFragment", "Task due date successfully updated!"))
+                    .addOnFailureListener(e -> Log.e("CalendarFragment", "Error updating task due date", e));
+        }
+    }
 }

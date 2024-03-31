@@ -40,6 +40,8 @@ public class MainActivity extends AppCompatActivity {
 
         if (sharedPreferences.getString("allGroupIds", null) == null){
             loadAndStoreGroupData();
+        } else {
+            replaceFragment(new TasksFragment());
         }
 
         String deepLink = sharedPreferences.getString("deepLink", null);
@@ -54,7 +56,6 @@ public class MainActivity extends AppCompatActivity {
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
-        replaceFragment(new TasksFragment());
 
         binding.bottomNavigationView.setOnItemSelectedListener(item -> {
             int itemId = item.getItemId();
@@ -93,13 +94,14 @@ public class MainActivity extends AppCompatActivity {
                                                 if (groupIdNameMap.size() == groupIds.size()) {
                                                     List<String> groupNames = new ArrayList<>();
 
-                                                    for (String iGroupIds : groupIds){
-                                                        groupNames.add(groupIdNameMap.get(iGroupIds));
+                                                    for (String iGroupId : groupIds){
+                                                        groupNames.add(groupIdNameMap.get(iGroupId));
                                                     }
 
                                                     sharedPreferences.edit().putString("activeGroupId", groupIds.get(0)).commit();
                                                     sharedPreferences.edit().putString("allGroupNames", TextUtils.join(",", groupNames)).commit();
                                                     sharedPreferences.edit().putString("allGroupIds", TextUtils.join(",", groupIds)).commit();
+                                                    replaceFragment(new TasksFragment());
                                                 }
                                             }
                                         })

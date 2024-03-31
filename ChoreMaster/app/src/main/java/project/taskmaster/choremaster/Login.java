@@ -86,7 +86,7 @@ public class Login extends AppCompatActivity {
         binding.btnLogin.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String email = binding.email.getText().toString();
+                String email = binding.email.getText().toString().trim();
                 String password = binding.password.getText().toString();
                 if(!email.contains("@") || !email.contains(".")) {
                     Toast.makeText(Login.this, "Enter a valid email!", Toast.LENGTH_SHORT).show();

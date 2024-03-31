@@ -92,10 +92,15 @@ public class CalendarFragment extends Fragment {
 
                                     Date date = task.getDueDate().toDate();
 
-                                    if(task.getRepeatingMode() != "none" && date.before(todayCalender.getTime())){
+                                    if(!task.getRepeatingMode().equals("none") && date.before(todayCalender.getTime())){
                                         Calendar nextDueDate = Calendar.getInstance();
                                         nextDueDate.setTime(task.getDueDate().toDate());
-                                        nextDueDate = getNextDueDate(todayCalender, task.getRepeatingMode(), task.getRepeatingValue(), false);
+                                        if(task.getRepeatingMode().equals("weekly")){
+                                            nextDueDate = getNextDueDate(todayCalender, task.getRepeatingMode(), task.getRepeatingValue(), false);
+                                        } else {
+                                            nextDueDate = getNextDueDate(nextDueDate, task.getRepeatingMode(), task.getRepeatingValue(), false);
+                                        }
+
                                         nextDueDate.set(Calendar.HOUR_OF_DAY, date.getHours());
                                         nextDueDate.set(Calendar.MINUTE, date.getMinutes());
                                         updateTaskDueDate(task, nextDueDate);
@@ -215,8 +220,8 @@ public class CalendarFragment extends Fragment {
             } else {
                 Calendar calendar = Calendar.getInstance();
                 calendar.setTime(todayCalender.getTime());
-                calendar.set(Calendar.HOUR_OF_DAY, dueDate.get(Calendar.HOUR_OF_DAY));
-                calendar.set(Calendar.MINUTE, dueDate.get(Calendar.MINUTE));
+                calendar.set(Calendar.HOUR_OF_DAY, 0);
+                calendar.set(Calendar.MINUTE, 0);
                 while (!dueDate.after(calendar)) {
                     dueDate.add(Calendar.DAY_OF_YEAR, days);
                 }

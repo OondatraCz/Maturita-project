@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Redirecting...</title>
+    <script type="text/javascript">
+        window.onload = function() {
+            window.location.href = 'choremaster://chore-master-project.web.app/joinGroup?groupId=' + getParameterByName('groupId');
+
+            setTimeout(function() {
+                document.getElementById("fallback").style.display = 'block';
+            }, 2500);
+        };
+
+        function getParameterByName(name) {
+            name = name.replace(/[\[\]]/g, '\\$&');
+            var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+                results = regex.exec(window.location.href);
+            if (!results) return null;
+            if (!results[2]) return '';
+            return decodeURIComponent(results[2].replace(/\+/g, ' '));
+        }
+    </script>
+</head>
+<body>
+    <div id="fallback" style="display:none;">
+        <p>If you're not redirected, please ensure the app is installed or <a href="https://maleonnecoskola">download the app</a>.</p>
+    </div>
+</body>
+</html>

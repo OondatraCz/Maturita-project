@@ -73,7 +73,6 @@ public class SettingsFragment extends Fragment {
         if (requestCode == CREATE_GROUP_REQUEST_CODE && resultCode == RESULT_OK) {
             updateGroupSpinner(sharedPreferences.getString("activeGroupId", null));
         }
-        Toast.makeText(getActivity(), "funguje to", Toast.LENGTH_SHORT).show();
     }
 
     public static SettingsFragment newInstance(String param1, String param2) {

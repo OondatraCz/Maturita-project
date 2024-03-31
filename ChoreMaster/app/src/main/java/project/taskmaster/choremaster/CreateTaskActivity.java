@@ -58,7 +58,6 @@ public class CreateTaskActivity extends AppCompatActivity {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         String groupId = sharedPreferences.getString("activeGroupId", null);
         String[] categories = {"Basic", "Home", "Work", "Personal", "Shopping"};
-        String selectedCategory = "Basic";
 
         ArrayAdapter<String> categoryAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, categories);
         categoryAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -137,7 +136,17 @@ public class CreateTaskActivity extends AppCompatActivity {
             public void onClick(View v) {
                 Map<String, Object> taskMap = new HashMap<>();
                 if(binding.edtName.getText().toString().trim().isEmpty()){
-                    Toast.makeText(CreateTaskActivity.this, "Nezadali jste jméno!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(CreateTaskActivity.this, "Field \"name\" must be filled!", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                Calendar todayCalendar = Calendar.getInstance();
+                todayCalendar.set(Calendar.HOUR_OF_DAY, 0);
+                todayCalendar.set(Calendar.MINUTE, 0);
+                todayCalendar.set(Calendar.SECOND, 0);
+                todayCalendar.set(Calendar.MILLISECOND, 0);
+                if (dueDateCalendar.before(todayCalendar)) {
+                    Toast.makeText(CreateTaskActivity.this, "The due date can not be in the past!", Toast.LENGTH_SHORT).show();
                     return;
                 }
 
