@@ -66,18 +66,18 @@ public class CreateGroupActivity extends AppCompatActivity {
                                     .update("groups", FieldValue.arrayUnion(groupId))
                                     .addOnSuccessListener(aVoid -> {
                                         sharedPreferences.edit().putString("activeGroupId", groupId).apply();
-                                        String groupNames = sharedPreferences.getString("allGroupNames", null);
-                                        String allGroupNames = null;
-                                        if (groupNames != null){
+                                        String groupNames = sharedPreferences.getString("allGroupNames", "");
+                                        String allGroupNames;
+                                        if (!groupNames.isEmpty()){
                                             allGroupNames = groupNames + "," + groupName;
                                         }
                                         else{
                                             allGroupNames = groupName;
                                         }
 
-                                        String groupIds = sharedPreferences.getString("allGroupIds", null);
-                                        String allGroupIds = null;
-                                        if (groupIds != null){
+                                        String groupIds = sharedPreferences.getString("allGroupIds", "");
+                                        String allGroupIds;
+                                        if (!groupIds.isEmpty()){
                                             allGroupIds = groupIds + "," + groupId;
                                         }
                                         else{

@@ -34,6 +34,7 @@ import project.taskmaster.choremaster.databinding.FragmentTasksBinding;
 
 public class TasksFragment extends Fragment {
     private List<Task> allTasks = new ArrayList<>();
+    private String groupId;
     private enum TaskFilter { ALL, MY_TASKS, OWNED_TASKS };
     private TaskFilter taskFilter = TaskFilter.ALL;
     private FragmentTasksBinding binding;
@@ -64,7 +65,6 @@ public class TasksFragment extends Fragment {
 
     private void setupTaskListener() {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
-        String groupId = sharedPreferences.getString("activeGroupId", null);
         if (groupId != null) {
             final CollectionReference tasksRef = db.collection("groups").document(groupId).collection("tasks");
             taskListener = tasksRef.addSnapshotListener((queryDocumentSnapshots, e) -> {
@@ -112,6 +112,12 @@ public class TasksFragment extends Fragment {
         View view = binding.getRoot();
 
         currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+
+        groupId = sharedPreferences.getString("activeGroupId", null);
+        if (groupId == null){
+            Toast.makeText(getActivity(), "You don't have any groups", Toast.LENGTH_SHORT).show();
+            return view;
+        }
 
         TaskAdapter.OnItemClickListener itemClickListener = new TaskAdapter.OnItemClickListener() {
             @Override

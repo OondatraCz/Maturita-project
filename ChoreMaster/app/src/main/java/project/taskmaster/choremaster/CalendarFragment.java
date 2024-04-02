@@ -79,6 +79,10 @@ public class CalendarFragment extends Fragment {
         binding = FragmentCalendarBinding.inflate(inflater, container, false);
         View view = binding.getRoot();
         String groupId = sharedPreferences.getString("activeGroupId", null);
+        if(groupId == null){
+            Toast.makeText(getActivity(), "You don't have any groups", Toast.LENGTH_SHORT).show();
+            return view;
+        }
         String userId = auth.getCurrentUser().getUid().toString();
 
         setDaysToShow();

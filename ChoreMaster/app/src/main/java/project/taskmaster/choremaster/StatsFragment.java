@@ -11,6 +11,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -45,6 +46,10 @@ public class StatsFragment extends Fragment {
         View view = binding.getRoot();
 
         String activeGroupId = sharedPreferences.getString("activeGroupId", null);
+        if (activeGroupId == null) {
+            Toast.makeText(getActivity(), "You don't have any groups", Toast.LENGTH_SHORT).show();
+            return view;
+        }
 
         if (!activeGroupId.isEmpty()) {
             db.collection("groups").document(activeGroupId).get().addOnSuccessListener(groupSnapshot -> {

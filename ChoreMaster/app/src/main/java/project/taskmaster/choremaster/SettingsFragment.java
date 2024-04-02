@@ -100,6 +100,7 @@ public class SettingsFragment extends Fragment {
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
         sharedPreferences = getActivity().getSharedPreferences("ChoreMaster", Context.MODE_PRIVATE);
+
         groupIds = loadGroupIds();
         groupNames = loadGroupNames();
     }
@@ -145,72 +146,6 @@ public class SettingsFragment extends Fragment {
             //binding.txt.setText(user.getEmail());
         }
 
-        populateGroupSpinner();
-        getGroupDescription();
-
-        binding.groupSelectionSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                sharedPreferences.edit().putString("activeGroupId", groupIds.get(position)).commit();
-                getGroupDescription();
-                //Toast.makeText(getActivity(), groupIds.get(position), Toast.LENGTH_SHORT).show();
-                //binding.txt.setText(groupIds.get(position)/*sharedPreferences.getString("activeGroupId", null)*/);
-            }
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
-        });
-
-        binding.btnManageGroup.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String groupId = sharedPreferences.getString("activeGroupId", null);
-                if (groupId != null) {
-                    checkUserRoleAndStartActivity(groupId);
-                } else {
-                    Toast.makeText(getActivity(), "No group selected", Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
-
-        binding.btnLeaveGroup.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String userId = user.getUid();
-                String groupId = sharedPreferences.getString("activeGroupId", null);
-
-                if (groupId == null) {
-                    Toast.makeText(getActivity(), "No group selected", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
-
-                db.collection("groups").document(groupId)
-                        .update("members." + userId, FieldValue.delete())
-                        .addOnSuccessListener(aVoid -> {
-                            db.collection("users").document(userId)
-                                    .update("groups", FieldValue.arrayRemove(groupId))
-                                    .addOnSuccessListener(bVoid -> {
-                                        Toast.makeText(getActivity(), "Group left successfully", Toast.LENGTH_SHORT).show();
-                                        groupNames.remove(groupIds.indexOf(groupId));
-                                        groupIds.remove(groupId);
-
-                                        saveGroupIds();
-                                        saveGroupNames();
-
-                                        if(!groupIds.isEmpty()){
-                                            sharedPreferences.edit().putString("activeGroupId", groupIds.get(0)).commit();
-                                        } else {
-                                            sharedPreferences.edit().remove("activeGroupId").commit();
-                                        }
-                                        populateGroupSpinner();
-                                    })
-                                    .addOnFailureListener(e -> Toast.makeText(getActivity(), "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
-                        })
-                        .addOnFailureListener(e -> Toast.makeText(getActivity(), "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
-            }
-        });
-
         binding.btnLogout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -235,62 +170,62 @@ public class SettingsFragment extends Fragment {
                 dialog.setView(passwordInput);
                 dialog.setMessage("Deleting this account will result in completely removing your account from the system and you will not be able to access the app.\nProvide your password to delete your account:");
                 dialog.setPositiveButton("Delete", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                String userPassword = passwordInput.getText().toString();
-                                if (userPassword.isEmpty()) return;
-                                AuthCredential credential = EmailAuthProvider.getCredential(user.getEmail(), userPassword);
-                                user.reauthenticate(credential)
-                                        .addOnSuccessListener(bVoid -> {
-                                            String userId = user.getUid();
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        String userPassword = passwordInput.getText().toString();
+                        if (userPassword.isEmpty()) return;
+                        AuthCredential credential = EmailAuthProvider.getCredential(user.getEmail(), userPassword);
+                        user.reauthenticate(credential)
+                                .addOnSuccessListener(bVoid -> {
+                                    String userId = user.getUid();
 
-                                            for (String groupId : groupIds) {
-                                                db.collection("groups").document(groupId)
-                                                        .update("members." + userId, FieldValue.delete())
-                                                        .addOnSuccessListener(aVoid -> {
-                                                            db.collection("groups").document(groupId).get()
-                                                                    .addOnSuccessListener(groupSnapshot -> {
-                                                                        if (groupSnapshot.exists()) {
-                                                                            Map<String, Object> groupData = groupSnapshot.getData();
-                                                                            if (groupData != null) {
-                                                                                Map<String, Object> members = (Map<String, Object>) groupData.get("members");
-                                                                                if (members == null || members.isEmpty()) {
-                                                                                    // Group is empty, delete it
-                                                                                    db.collection("groups").document(groupId).delete();
-                                                                                }
-                                                                            }
+                                    for (String groupId : groupIds) {
+                                        db.collection("groups").document(groupId)
+                                                .update("members." + userId, FieldValue.delete())
+                                                .addOnSuccessListener(aVoid -> {
+                                                    db.collection("groups").document(groupId).get()
+                                                            .addOnSuccessListener(groupSnapshot -> {
+                                                                if (groupSnapshot.exists()) {
+                                                                    Map<String, Object> groupData = groupSnapshot.getData();
+                                                                    if (groupData != null) {
+                                                                        Map<String, Object> members = (Map<String, Object>) groupData.get("members");
+                                                                        if (members == null || members.isEmpty()) {
+                                                                            // Group is empty, delete it
+                                                                            db.collection("groups").document(groupId).delete();
                                                                         }
-                                                                    });
-                                                        }); //TODO - povolit uzivateli leavnout jenom pokud tam je jeste nejakej admin
-                                            }
+                                                                    }
+                                                                }
+                                                            });
+                                                });
+                                    }
 
 
-                                            db.collection("users").document(userId).delete();
+                                    db.collection("users").document(userId).delete();
 
-                                            user.delete()
-                                                    .addOnCompleteListener(new OnCompleteListener<Void>() {
-                                                        @Override
-                                                        public void onComplete(@NonNull Task<Void> task) {
-                                                            Toast.makeText(getActivity(), "Account deleted", Toast.LENGTH_SHORT).show();
-                                                            Intent intent = new Intent(getActivity(), Register.class);
-                                                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                                                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                                                            startActivity(intent);
-                                                        }
-                                                    })
-                                                    .addOnFailureListener(new OnFailureListener() {
-                                                        @Override
-                                                        public void onFailure(@NonNull Exception e) {
-                                                            Toast.makeText(getActivity(), e.getMessage(), Toast.LENGTH_SHORT).show();
-                                                        }
-                                                    });
-                                        })
-                                        .addOnFailureListener(e -> {
-                                            Toast.makeText(getActivity(), e.getMessage(), Toast.LENGTH_SHORT).show();
-                                            dialog.dismiss();
-                                        });
-                            }
-                        });
+                                    user.delete()
+                                            .addOnCompleteListener(new OnCompleteListener<Void>() {
+                                                @Override
+                                                public void onComplete(@NonNull Task<Void> task) {
+                                                    Toast.makeText(getActivity(), "Account deleted", Toast.LENGTH_SHORT).show();
+                                                    Intent intent = new Intent(getActivity(), Register.class);
+                                                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                                                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                                    startActivity(intent);
+                                                }
+                                            })
+                                            .addOnFailureListener(new OnFailureListener() {
+                                                @Override
+                                                public void onFailure(@NonNull Exception e) {
+                                                    Toast.makeText(getActivity(), e.getMessage(), Toast.LENGTH_SHORT).show();
+                                                }
+                                            });
+                                })
+                                .addOnFailureListener(e -> {
+                                    Toast.makeText(getActivity(), e.getMessage(), Toast.LENGTH_SHORT).show();
+                                    dialog.dismiss();
+                                });
+                    }
+                });
                 dialog.setNegativeButton("Dismiss", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
@@ -316,10 +251,97 @@ public class SettingsFragment extends Fragment {
             }
         });
 
+        if(sharedPreferences.getString("activeGroupId", null) == null){
+            return view;
+        }
+
+        populateGroupSpinner();
+        getGroupDescription();
+
+        binding.groupSelectionSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                sharedPreferences.edit().putString("activeGroupId", groupIds.get(position)).commit();
+                getGroupDescription();
+                //Toast.makeText(getActivity(), groupIds.get(position), Toast.LENGTH_SHORT).show();
+                //binding.txt.setText(groupIds.get(position)/*sharedPreferences.getString("activeGroupId", null)*/);
+            }
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+
+        binding.btnManageGroup.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String groupId = sharedPreferences.getString("activeGroupId", null);
+                if (groupId == null) {
+                    Toast.makeText(getActivity(), "No group selected", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                if (groupId != null) {
+                    checkUserRoleAndStartActivity(groupId);
+                } else {
+                    Toast.makeText(getActivity(), "No group selected", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        binding.btnLeaveGroup.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                new AlertDialog.Builder(getActivity())
+                        .setTitle("Leave Group")
+                        .setMessage("Are you sure you want to leave this group?")
+                        .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int whichButton) {
+                                String userId = user.getUid();
+                                String groupId = sharedPreferences.getString("activeGroupId", null);
+
+                                if (groupId == null) {
+                                    Toast.makeText(getActivity(), "No group selected", Toast.LENGTH_SHORT).show();
+                                    return;
+                                }
+
+                                db.collection("groups").document(groupId)
+                                        .update("members." + userId, FieldValue.delete())
+                                        .addOnSuccessListener(aVoid -> {
+                                            db.collection("users").document(userId)
+                                                    .update("groups", FieldValue.arrayRemove(groupId))
+                                                    .addOnSuccessListener(bVoid -> {
+                                                        Toast.makeText(getActivity(), "Group left successfully", Toast.LENGTH_SHORT).show();
+                                                        groupNames.remove(groupIds.indexOf(groupId));
+                                                        groupIds.remove(groupId);
+
+                                                        saveGroupIds();
+                                                        saveGroupNames();
+
+                                                        Log.d("aaa", groupIds.toString());
+                                                        Log.d("aaa", groupNames.toString());
+
+                                                        if (!groupIds.isEmpty()) {
+                                                            sharedPreferences.edit().putString("activeGroupId", groupIds.get(0)).commit();
+                                                        } else {
+                                                            sharedPreferences.edit().remove("activeGroupId").commit();
+                                                        }
+                                                        populateGroupSpinner();
+                                                    })
+                                                    .addOnFailureListener(e -> Toast.makeText(getActivity(), "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                                        })
+                                        .addOnFailureListener(e -> Toast.makeText(getActivity(), "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                            }})
+                        .setNegativeButton(android.R.string.no, null).show();
+            }
+        });
+
         binding.btnInviteUser.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 String activeGroupId = sharedPreferences.getString("activeGroupId", null);
+                if (activeGroupId == null) {
+                    Toast.makeText(getActivity(), "No group selected", Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 db.collection("groups").document(activeGroupId).get()
                         .addOnSuccessListener(documentSnapshot -> {
                             if (documentSnapshot.exists()){
